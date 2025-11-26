@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "502471827029",
+    "project_id": "mant-suray",
+    "storage_bucket": "mant-suray.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:502471827029:android:23860a45b202ecf9a67edc",
+        "android_client_info": {
+          "package_name": "com.example.untitled1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBkSlQB_xrL64y9rso5gQ6yiHOFBfjM6cU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
