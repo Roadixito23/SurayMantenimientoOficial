@@ -35,7 +35,10 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
 
   int _currentPage = 0;
   int _itemsPerPage = 25;
-  Bus? _hoveredBus;
+
+  // Cache para los buses para evitar rebuilds innecesarios
+  List<Bus>? _cachedBuses;
+  Future<List<Bus>>? _busesFuture;
 
   @override
   void initState() {
@@ -63,8 +66,12 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
 
   // --- FETCH & FILTER BUSES ---
   Future<List<Bus>> _getBusesFiltrados() async {
-    final buses = await DataService.getBuses();
-    var filtered = List<Bus>.from(buses);
+    // Solo obtener buses del servidor si el cache está vacío
+    if (_cachedBuses == null) {
+      _cachedBuses = await DataService.getBuses();
+    }
+
+    var filtered = List<Bus>.from(_cachedBuses!);
 
     if (_filtroEstado != 'Todos') {
       EstadoBus estado;
@@ -118,6 +125,13 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
     return filtered;
   }
 
+  void _refreshBuses() {
+    setState(() {
+      _cachedBuses = null;
+      _busesFuture = null;
+    });
+  }
+
   void _sortBuses(List<Bus> buses) {
     buses.sort((a, b) {
       int cmp;
@@ -156,15 +170,17 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    // Cachear el Future para evitar recrearlo en cada rebuild
+    _busesFuture ??= _getBusesFiltrados();
+
     return Scaffold(
       backgroundColor: SurayColors.blancoHumo,
       body: Column(
         children: [
-          _buildTopToolbar(),
           _buildFilterPanel(),
           Expanded(
             child: FutureBuilder<List<Bus>>(
-              future: _getBusesFiltrados(),
+              future: _busesFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return _buildLoadingState();
@@ -188,7 +204,6 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
                   opacity: _fadeAnimationController,
                   child: Column(
                     children: [
-                      _buildInfoTip(),
                       Expanded(
                         child: total == 0
                             ? _buildEmptyState()
@@ -418,90 +433,185 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            SurayColors.azulMarinoProfundo,
+            SurayColors.azulMarinoClaro,
+          ],
+        ),
         boxShadow: [
           BoxShadow(
-            color: SurayColors.grisAntracita.withOpacity(0.1),
-            blurRadius: 4,
-            offset: Offset(0, 2),
+            color: SurayColors.azulMarinoProfundo.withOpacity(0.3),
+            blurRadius: 8,
+            offset: Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         children: [
+          // Header con título y botón Nuevo Bus
           Row(
             children: [
-              // Búsqueda
-              Expanded(
-                flex: 2,
-                child: _buildSearchField(),
-              ),
-              SizedBox(width: 12),
-              // Estado
-              Expanded(
-                flex: 1,
-                child: _buildDropdownFilter(
-                  value: _filtroEstado,
-                  label: 'Estado',
-                  items: ['Todos', 'Disponible', 'En Reparación', 'Fuera de Servicio'],
-                  onChanged: (v) => setState(() {
-                    _filtroEstado = v!;
-                    _currentPage = 0;
-                  }),
-                ),
-              ),
-              SizedBox(width: 12),
-              // Mantenimiento
-              Expanded(
-                flex: 1,
-                child: _buildDropdownFilter(
-                  value: _filtroMantenimiento,
-                  label: 'Mantenimiento',
-                  items: [
-                    'Todos',
-                    'Mantenimiento Vencido',
-                    'Mantenimiento Urgente',
-                    'Mantenimiento Al Día',
-                    'Sin Configurar'
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: SurayColors.naranjaQuemado,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: SurayColors.naranjaQuemado.withOpacity(0.4),
+                      blurRadius: 8,
+                      spreadRadius: 2,
+                    ),
                   ],
-                  onChanged: (v) => setState(() {
-                    _filtroMantenimiento = v!;
-                    _currentPage = 0;
-                  }),
+                ),
+                child: Icon(
+                  Icons.directions_bus,
+                  color: SurayColors.blancoHumo,
+                  size: 28,
                 ),
               ),
-              SizedBox(width: 12),
-              // Ordenar
+              SizedBox(width: 16),
               Expanded(
-                flex: 1,
-                child: _buildDropdownFilter(
-                  value: _filtroOrden,
-                  label: 'Ordenar por',
-                  items: [
-                    'patente',
-                    'marca',
-                    'año',
-                    'estado',
-                    'kilometraje',
-                    'kilometraje_ideal',
-                    'fecha_ideal',
-                    'ubicacion'
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Gestión de Flota',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: SurayColors.blancoHumo,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    FutureBuilder<Map<String, int>>(
+                      future: _getEstadisticasRapidas(),
+                      builder: (context, snap) {
+                        if (!snap.hasData) return SizedBox.shrink();
+                        final s = snap.data!;
+                        return Wrap(
+                          spacing: 16,
+                          children: [
+                            _buildStatChip('${s['total']} buses', Icons.directions_bus),
+                            _buildStatChip('${s['disponibles']} disponibles', Icons.check_circle),
+                            _buildStatChip('${s['alertasMantenimiento']} alertas mant.', Icons.warning),
+                            _buildStatChip('${s['alertas']} rev. técnica', Icons.assignment_late),
+                          ],
+                        );
+                      },
+                    ),
                   ],
-                  displayMapper: _labelOrden,
-                  onChanged: (v) => setState(() {
-                    _filtroOrden = v!;
-                  }),
                 ),
               ),
-              SizedBox(width: 8),
-              _buildFilterIconButton(
-                icon: _ordenAscendente ? Icons.arrow_upward : Icons.arrow_downward,
-                tooltip: _ordenAscendente ? 'Ascendente' : 'Descendente',
-                onPressed: () => setState(() => _ordenAscendente = !_ordenAscendente),
+              SizedBox(width: 16),
+              _buildModernButton(
+                onPressed: () => _mostrarDialogoBus(context),
+                icon: Icons.add_circle,
+                label: 'Nuevo Bus',
+                color: SurayColors.naranjaQuemado,
               ),
-              SizedBox(width: 8),
-              _buildClearButton(),
             ],
+          ),
+          SizedBox(height: 20),
+          // Filtros en una segunda fila
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: SurayColors.blancoHumo.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                // Búsqueda
+                Expanded(
+                  flex: 2,
+                  child: _buildSearchField(),
+                ),
+                SizedBox(width: 12),
+                // Estado
+                Expanded(
+                  flex: 1,
+                  child: _buildDropdownFilter(
+                    value: _filtroEstado,
+                    label: 'Estado',
+                    items: ['Todos', 'Disponible', 'En Reparación', 'Fuera de Servicio'],
+                    onChanged: (v) {
+                      setState(() {
+                        _filtroEstado = v!;
+                        _currentPage = 0;
+                        _busesFuture = null;
+                      });
+                    },
+                  ),
+                ),
+                SizedBox(width: 12),
+                // Mantenimiento
+                Expanded(
+                  flex: 1,
+                  child: _buildDropdownFilter(
+                    value: _filtroMantenimiento,
+                    label: 'Mantenimiento',
+                    items: [
+                      'Todos',
+                      'Mantenimiento Vencido',
+                      'Mantenimiento Urgente',
+                      'Mantenimiento Al Día',
+                      'Sin Configurar'
+                    ],
+                    onChanged: (v) {
+                      setState(() {
+                        _filtroMantenimiento = v!;
+                        _currentPage = 0;
+                        _busesFuture = null;
+                      });
+                    },
+                  ),
+                ),
+                SizedBox(width: 12),
+                // Ordenar
+                Expanded(
+                  flex: 1,
+                  child: _buildDropdownFilter(
+                    value: _filtroOrden,
+                    label: 'Ordenar por',
+                    items: [
+                      'patente',
+                      'marca',
+                      'año',
+                      'estado',
+                      'kilometraje',
+                      'kilometraje_ideal',
+                      'fecha_ideal',
+                      'ubicacion'
+                    ],
+                    displayMapper: _labelOrden,
+                    onChanged: (v) {
+                      setState(() {
+                        _filtroOrden = v!;
+                        _busesFuture = null;
+                      });
+                    },
+                  ),
+                ),
+                SizedBox(width: 8),
+                _buildFilterIconButton(
+                  icon: _ordenAscendente ? Icons.arrow_upward : Icons.arrow_downward,
+                  tooltip: _ordenAscendente ? 'Ascendente' : 'Descendente',
+                  onPressed: () {
+                    setState(() {
+                      _ordenAscendente = !_ordenAscendente;
+                      _busesFuture = null;
+                    });
+                  },
+                ),
+                SizedBox(width: 8),
+                _buildClearButton(),
+              ],
+            ),
           ),
         ],
       ),
@@ -511,41 +621,48 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
   Widget _buildSearchField() {
     return TextField(
       controller: _searchController,
+      style: TextStyle(color: SurayColors.azulMarinoProfundo),
       decoration: InputDecoration(
         labelText: 'Buscar buses',
+        labelStyle: TextStyle(color: SurayColors.blancoHumo.withOpacity(0.9)),
         hintText: 'Patente, marca, modelo...',
-        prefixIcon: Icon(Icons.search, color: SurayColors.azulMarinoProfundo),
+        hintStyle: TextStyle(color: SurayColors.blancoHumo.withOpacity(0.6)),
+        prefixIcon: Icon(Icons.search, color: SurayColors.blancoHumo.withOpacity(0.9)),
         suffixIcon: _filtroTexto.isNotEmpty
             ? IconButton(
-          icon: Icon(Icons.clear, color: SurayColors.grisAntracita),
+          icon: Icon(Icons.clear, color: SurayColors.blancoHumo.withOpacity(0.9)),
           onPressed: () {
             _searchController.clear();
             setState(() {
               _filtroTexto = '';
               _currentPage = 0;
+              _busesFuture = null;
             });
           },
         )
             : null,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: SurayColors.grisAntracita.withOpacity(0.3)),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: SurayColors.grisAntracita.withOpacity(0.3)),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: SurayColors.azulMarinoProfundo, width: 2),
+          borderSide: BorderSide(color: SurayColors.naranjaQuemado, width: 2),
         ),
         filled: true,
-        fillColor: SurayColors.blancoHumo,
+        fillColor: Colors.white.withOpacity(0.15),
       ),
-      onChanged: (v) => setState(() {
-        _filtroTexto = v;
-        _currentPage = 0;
-      }),
+      onChanged: (v) {
+        setState(() {
+          _filtroTexto = v;
+          _currentPage = 0;
+          _busesFuture = null;
+        });
+      },
     );
   }
 
@@ -712,39 +829,62 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
           // Header con scroll horizontal
           Container(
             height: 60,
-            child: Scrollbar(
-              controller: _horizontalScrollController,
-              thumbVisibility: true,
-              trackVisibility: true,
-              child: SingleChildScrollView(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: ScrollbarTheme(
+              data: ScrollbarThemeData(
+                thumbVisibility: MaterialStateProperty.all(true),
+                trackVisibility: MaterialStateProperty.all(true),
+                thickness: MaterialStateProperty.all(16),
+                thumbColor: MaterialStateProperty.all(SurayColors.naranjaQuemado.withOpacity(0.8)),
+                trackColor: MaterialStateProperty.all(SurayColors.grisAntracita.withOpacity(0.15)),
+                trackBorderColor: MaterialStateProperty.all(SurayColors.grisAntracita.withOpacity(0.25)),
+                radius: Radius.circular(10),
+              ),
+              child: Scrollbar(
                 controller: _horizontalScrollController,
-                scrollDirection: Axis.horizontal,
-                child: Container(
-                  width: totalWidth,
-                  child: _buildTableHeader(),
+                child: SingleChildScrollView(
+                  controller: _horizontalScrollController,
+                  scrollDirection: Axis.horizontal,
+                  child: Container(
+                    width: totalWidth,
+                    child: _buildTableHeader(),
+                  ),
                 ),
               ),
             ),
           ),
           // Contenido de la tabla
           Expanded(
-            child: Scrollbar(
-              controller: _horizontalScrollController,
-              thumbVisibility: true,
-              trackVisibility: true,
-              child: SingleChildScrollView(
+            child: ScrollbarTheme(
+              data: ScrollbarThemeData(
+                thumbVisibility: MaterialStateProperty.all(true),
+                trackVisibility: MaterialStateProperty.all(true),
+                thickness: MaterialStateProperty.all(16),
+                thumbColor: MaterialStateProperty.all(SurayColors.naranjaQuemado.withOpacity(0.8)),
+                trackColor: MaterialStateProperty.all(SurayColors.grisAntracita.withOpacity(0.15)),
+                trackBorderColor: MaterialStateProperty.all(SurayColors.grisAntracita.withOpacity(0.25)),
+                radius: Radius.circular(10),
+                interactive: true,
+              ),
+              child: Scrollbar(
                 controller: _horizontalScrollController,
-                scrollDirection: Axis.horizontal,
-                child: Container(
-                  width: totalWidth,
-                  child: Scrollbar(
-                    controller: _verticalScrollController,
-                    thumbVisibility: true,
-                    trackVisibility: true,
-                    child: ListView.builder(
+                child: SingleChildScrollView(
+                  controller: _horizontalScrollController,
+                  scrollDirection: Axis.horizontal,
+                  child: Container(
+                    width: totalWidth,
+                    child: Scrollbar(
                       controller: _verticalScrollController,
-                      itemCount: buses.length,
-                      itemBuilder: (_, i) => _buildTableRow(buses[i], i.isEven),
+                      child: ListView.builder(
+                        controller: _verticalScrollController,
+                        itemCount: buses.length,
+                        itemBuilder: (_, i) => _buildTableRow(buses[i], i.isEven),
+                      ),
                     ),
                   ),
                 ),
@@ -806,48 +946,10 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
   }
 
   Widget _buildTableRow(Bus bus, bool isEven) {
-    final isHovered = _hoveredBus?.id == bus.id;
-    final bg = isHovered
-        ? SurayColors.naranjaQuemado.withOpacity(0.05)
-        : (isEven ? SurayColors.blancoHumo : Colors.white);
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hoveredBus = bus),
-      onExit: (_) => setState(() => _hoveredBus = null),
-      child: InkWell(
-        onTap: () => _showBusActionsDialog(bus),
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 150),
-          height: 60,
-          decoration: BoxDecoration(
-            color: bg,
-            border: Border(
-              bottom: BorderSide(
-                color: SurayColors.grisAntracita.withOpacity(0.1),
-                width: 1,
-              ),
-              left: isHovered
-                  ? BorderSide(color: SurayColors.naranjaQuemado, width: 3)
-                  : BorderSide.none,
-            ),
-          ),
-          child: Row(
-            children: [
-              _dataCell(bus.identificador ?? '-', 100),
-              _dataCell(bus.patente, 140, bold: true),
-              _dataCell(bus.marca, 120),
-              _dataCell(bus.modelo, 140),
-              _dataCell('${bus.anio}', 80),
-              _estadoCell(bus, 140),
-              _kilometrajeCell(bus.kilometraje, 150),
-              _kilometrajeIdealCell(bus, 150),
-              _fechaIdealCell(bus, 150),
-              _revisionTecnicaCell(bus, 160),
-              _dataCell(bus.ubicacionActual ?? '-', 200),
-            ],
-          ),
-        ),
-      ),
+    return _BusTableRow(
+      bus: bus,
+      isEven: isEven,
+      onTap: () => _showBusActionsDialog(bus),
     );
   }
 
@@ -1583,6 +1685,7 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
       _ordenAscendente = true;
       _currentPage = 0;
       _searchController.clear();
+      _busesFuture = null;
     });
   }
 
@@ -1985,5 +2088,289 @@ class _MaintenanceConfigDialogState extends State<_MaintenanceConfigDialog> {
         ),
       ),
     );
+  }
+}
+
+// Widget separado para las filas de la tabla que maneja su propio hover state
+class _BusTableRow extends StatefulWidget {
+  final Bus bus;
+  final bool isEven;
+  final VoidCallback onTap;
+
+  const _BusTableRow({
+    required this.bus,
+    required this.isEven,
+    required this.onTap,
+  });
+
+  @override
+  _BusTableRowState createState() => _BusTableRowState();
+}
+
+class _BusTableRowState extends State<_BusTableRow> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = _isHovered
+        ? SurayColors.naranjaQuemado.withOpacity(0.08)
+        : (widget.isEven ? SurayColors.blancoHumo : Colors.white);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: InkWell(
+        onTap: widget.onTap,
+        hoverColor: SurayColors.naranjaQuemado.withOpacity(0.05),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 150),
+          height: 60,
+          decoration: BoxDecoration(
+            color: bg,
+            border: Border(
+              bottom: BorderSide(
+                color: SurayColors.grisAntracita.withOpacity(0.1),
+                width: 1,
+              ),
+              left: _isHovered
+                  ? BorderSide(color: SurayColors.naranjaQuemado, width: 4)
+                  : BorderSide.none,
+            ),
+          ),
+          child: Row(
+            children: [
+              _dataCell(widget.bus.identificador ?? '-', 100),
+              _dataCell(widget.bus.patente, 140, bold: true),
+              _dataCell(widget.bus.marca, 120),
+              _dataCell(widget.bus.modelo, 140),
+              _dataCell('${widget.bus.anio}', 80),
+              _estadoCell(widget.bus, 140),
+              _kilometrajeCell(widget.bus.kilometraje, 150),
+              _kilometrajeIdealCell(widget.bus, 150),
+              _fechaIdealCell(widget.bus, 150),
+              _revisionTecnicaCell(widget.bus, 160),
+              _dataCell(widget.bus.ubicacionActual ?? '-', 200),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dataCell(String text, double width, {bool bold = false}) {
+    return Container(
+      width: width,
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: SurayColors.grisAntracita.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Text(
+        text,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+          color: bold ? SurayColors.azulMarinoProfundo : SurayColors.grisAntracita,
+        ),
+      ),
+    );
+  }
+
+  Widget _estadoCell(Bus bus, double width) {
+    Color c;
+    IconData ic;
+    String lbl;
+    switch (bus.estado) {
+      case EstadoBus.disponible:
+        c = Colors.green;
+        ic = Icons.check_circle;
+        lbl = 'Disponible';
+        break;
+      case EstadoBus.enReparacion:
+        c = SurayColors.naranjaQuemado;
+        ic = Icons.build;
+        lbl = 'En Reparación';
+        break;
+      default:
+        c = Colors.red;
+        ic = Icons.cancel;
+        lbl = 'Fuera de Servicio';
+    }
+    return Container(
+      width: width,
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: SurayColors.grisAntracita.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: c.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: c.withOpacity(0.3), width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(ic, size: 14, color: c),
+            SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                lbl,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: c,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _revisionTecnicaCell(Bus bus, double width) {
+    if (bus.fechaRevisionTecnica == null) {
+      return _dataCell('No registrada', width);
+    }
+
+    Color textColor = Colors.green;
+    if (bus.revisionTecnicaVencida) {
+      textColor = Colors.red;
+    } else if (bus.revisionTecnicaProximaAVencer) {
+      textColor = SurayColors.naranjaQuemado;
+    }
+
+    return Container(
+      width: width,
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: SurayColors.grisAntracita.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Text(
+        ChileanUtils.formatDate(bus.fechaRevisionTecnica!),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _kilometrajeCell(double? kilometraje, double width) {
+    return Container(
+      width: width,
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: SurayColors.grisAntracita.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Text(
+        kilometraje != null
+            ? _formatKilometraje(kilometraje)
+            : 'No registrado',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: kilometraje != null
+              ? SurayColors.azulMarinoProfundo
+              : SurayColors.grisAntracitaClaro,
+        ),
+      ),
+    );
+  }
+
+  Widget _kilometrajeIdealCell(Bus bus, double width) {
+    final kmIdeal = bus.kilometrajeIdeal ?? 0;
+    final kmActual = bus.kilometraje ?? 0;
+    final diferencia = kmIdeal - kmActual;
+
+    Color textColor = Colors.green;
+    if (kmActual > kmIdeal) {
+      textColor = Colors.red;
+    } else if (diferencia < (MantenimientoConfig.kilometrajeIdeal * 0.2)) {
+      textColor = SurayColors.naranjaQuemado;
+    }
+
+    return Container(
+      width: width,
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: SurayColors.grisAntracita.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Text(
+        kmIdeal > 0 ? _formatKilometraje(kmIdeal) : 'No configurado',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _fechaIdealCell(Bus bus, double width) {
+    final fechaIdeal = MantenimientoConfig.calcularFechaIdeal(bus);
+    final diasHastaFecha = fechaIdeal.difference(DateTime.now()).inDays;
+
+    Color textColor = Colors.green;
+    if (diasHastaFecha < 7) {
+      textColor = SurayColors.naranjaQuemado;
+    } else if (diasHastaFecha < 0) {
+      textColor = Colors.red;
+    }
+
+    return Container(
+      width: width,
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: SurayColors.grisAntracita.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Text(
+        ChileanUtils.formatDate(fechaIdeal),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
+  String _formatKilometraje(double km) {
+    final formatador = NumberFormat("#,##0", "es_CL");
+    return formatador.format(km);
   }
 }

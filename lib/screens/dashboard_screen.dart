@@ -53,43 +53,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildAlertasKilometrajeProximo(),
             SizedBox(height: 20),
 
-            // Contenido principal - Dos columnas
+            // Contenido principal - Una sola columna para revisión técnica
             Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: FutureBuilder<List<Bus>>(
-                      future: DataService.getBusesEnReparacion(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return Card(child: Center(child: CircularProgressIndicator()));
-                        }
-                        final busesEnReparacion = snapshot.data ?? [];
-                        return _buildBusesEnReparacionCard(busesEnReparacion);
-                      },
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    flex: 3,
-                    child: FutureBuilder<List<List<Bus>>>(
-                      future: Future.wait([
-                        DataService.getBusesRevisionTecnicaProximaVencer(),
-                        DataService.getBusesRevisionTecnicaVencida(),
-                      ]),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return Card(child: Center(child: CircularProgressIndicator()));
-                        }
-                        final busesProximasVencer = snapshot.data?[0] ?? [];
-                        final busesVencidas = snapshot.data?[1] ?? [];
-                        return _buildAlertasRevisionTecnicaCard(busesProximasVencer, busesVencidas);
-                      },
-                    ),
-                  ),
-                ],
+              child: FutureBuilder<List<List<Bus>>>(
+                future: Future.wait([
+                  DataService.getBusesRevisionTecnicaProximaVencer(),
+                  DataService.getBusesRevisionTecnicaVencida(),
+                ]),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Card(child: Center(child: CircularProgressIndicator()));
+                  }
+                  final busesProximasVencer = snapshot.data?[0] ?? [];
+                  final busesVencidas = snapshot.data?[1] ?? [];
+                  return _buildAlertasRevisionTecnicaCard(busesProximasVencer, busesVencidas);
+                },
               ),
             ),
           ],
