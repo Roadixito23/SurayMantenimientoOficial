@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/bus.dart';
-import '../models/mantencion.dart';
 import '../models/reporte_diario.dart';
 import '../models/mantenimiento_preventivo.dart';
-import '../models/tipo_mantenimiento_personalizado.dart'; // ✅ NUEVO IMPORT
+import '../models/tipo_mantenimiento_personalizado.dart';
 import '../services/data_service.dart';
 import '../services/chilean_utils.dart';
-import 'historial_mantencion_dialog.dart';
 
 class HistorialCompletoDialog extends StatefulWidget {
   final Bus bus;
@@ -325,21 +323,6 @@ class _HistorialCompletoDialogState extends State<HistorialCompletoDialog> {
       }
     }
 
-    // Obtener mantenimientos correctivos del historial tradicional
-    for (final mantencion in widget.bus.historialMantenciones) {
-      if (_debeIncluirCorrectivo(mantencion)) {
-        todosLosRegistros.add({
-          'tipo': 'correctivo',
-          'fecha': mantencion.fecha,
-          'descripcion': mantencion.descripcion,
-          'completada': mantencion.completada,
-          'repuestos': mantencion.repuestosUsados,
-          'data': mantencion,
-          'tipoMantenimiento': TipoMantenimiento.correctivo, // Asumir correctivo para mantenciones tradicionales
-          'tipoTrabajo': 'Reparación Correctiva',
-        });
-      }
-    }
 
     // Obtener reportes específicos del bus
     final reportesDelBus = await DataService.getReportesPorBus(widget.bus.patente);
@@ -384,19 +367,6 @@ class _HistorialCompletoDialogState extends State<HistorialCompletoDialog> {
     return true;
   }
 
-  bool _debeIncluirCorrectivo(Mantencion mantencion) {
-    // Filtrar por tipo de actividad
-    if (_filtroTipo != 'Todos' && _filtroTipo != 'Mantenimiento') return false;
-
-    // Filtrar por estado
-    if (_filtroEstado == 'Completados' && !mantencion.completada) return false;
-    if (_filtroEstado == 'En Progreso' && mantencion.completada) return false;
-
-    // Filtrar por tipo de mantenimiento (asumir correctivo para mantenciones tradicionales)
-    if (_filtroTipoMantenimiento != 'Todos' && _filtroTipoMantenimiento != 'Correctivo') return false;
-
-    return true;
-  }
 
   bool _debeIncluirReporte(ReporteDiario reporte) {
     // Filtrar por tipo de actividad
@@ -424,15 +394,10 @@ class _HistorialCompletoDialogState extends State<HistorialCompletoDialog> {
     String tipoLabel;
 
     if (tipo == 'mantenimiento') {
-      // ✅ ACTUALIZADO: Usar tipos de mantenimiento personalizados
       final TipoMantenimiento tipoMant = registro['tipoMantenimiento'] ?? TipoMantenimiento.preventivo;
       tipoColor = _getColorTipoMantenimiento(tipoMant);
       tipoIcon = _getIconTipoMantenimiento(tipoMant);
       tipoLabel = _getLabelTipoMantenimiento(tipoMant).toUpperCase();
-    } else if (tipo == 'correctivo') {
-      tipoColor = Color(0xFFE53E3E);
-      tipoIcon = Icons.handyman;
-      tipoLabel = 'CORRECTIVO';
     } else if (tipo == 'reporte') {
       final ReporteDiario reporteData = registro['data'] as ReporteDiario;
       tipoColor = reporteData.colorTipoTrabajo;
@@ -643,23 +608,6 @@ class _HistorialCompletoDialogState extends State<HistorialCompletoDialog> {
       );
     }
 
-    // Acciones
-    if (tipo == 'correctivo') {
-      details.add(SizedBox(height: 12));
-      details.add(
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton.icon(
-              onPressed: () => _editarMantencion(registro['data'] as Mantencion),
-              icon: Icon(Icons.edit, size: 16),
-              label: Text('Editar', style: TextStyle(fontSize: 12)),
-            ),
-          ],
-        ),
-      );
-    }
-
     return details;
   }
 
@@ -709,21 +657,17 @@ class _HistorialCompletoDialogState extends State<HistorialCompletoDialog> {
   }
 
   Future<Map<String, int>> _getEstadisticasCompletas() async {
-    final mantencionesCorrectivas = widget.bus.historialMantenciones;
-    final mantenimientosPersonalizados = widget.bus.mantenimientoPreventivo?.historialMantenimientos ?? [];
     final reportesDelBus = await DataService.getReportesPorBus(widget.bus.patente);
 
-    // ✅ ACTUALIZADO: Contar por tipos de mantenimiento
     final estadisticasMantenimiento = widget.bus.estadisticasMantenimientosPorTipo;
 
-    final totalCorrectivos = mantencionesCorrectivas.length + (estadisticasMantenimiento[TipoMantenimiento.correctivo] ?? 0);
+    final totalCorrectivos = estadisticasMantenimiento[TipoMantenimiento.correctivo] ?? 0;
     final totalRutinarios = estadisticasMantenimiento[TipoMantenimiento.rutinario] ?? 0;
     final totalPreventivos = estadisticasMantenimiento[TipoMantenimiento.preventivo] ?? 0;
     final totalReportes = reportesDelBus.length;
     final totalCompleto = totalCorrectivos + totalRutinarios + totalPreventivos + totalReportes;
 
-    final correctivosCompletados = mantencionesCorrectivas.where((m) => m.completada).length;
-    final completados = correctivosCompletados + totalRutinarios + totalPreventivos + totalReportes;
+    final completados = totalCorrectivos + totalRutinarios + totalPreventivos + totalReportes;
 
     return {
       'total': totalCompleto,
@@ -789,14 +733,6 @@ class _HistorialCompletoDialogState extends State<HistorialCompletoDialog> {
       _filtroTipoMantenimiento = 'Todos';
       _filtroTipoTrabajo = 'Todos';
     });
-  }
-
-  void _editarMantencion(Mantencion mantencion) {
-    Navigator.pop(context);
-    showDialog(
-      context: context,
-      builder: (context) => HistorialMantencionDialog(bus: widget.bus),
-    );
   }
 
   void _exportarHistorial() {
