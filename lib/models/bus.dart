@@ -2,6 +2,7 @@ import 'repuesto_asignado.dart';
 import 'reporte_diario.dart';
 import 'mantenimiento_preventivo.dart';
 import 'tipo_mantenimiento_personalizado.dart';
+import 'mantencion.dart';
 
 enum EstadoBus { disponible, enReparacion, fueraDeServicio }
 
@@ -15,6 +16,7 @@ class Bus {
   final EstadoBus estado;
   final List<RepuestoAsignado> repuestosAsignados;
   final List<String> historialReportes;
+  final List<Mantencion> historialMantenciones;
   final DateTime fechaRegistro;
   final DateTime? fechaRevisionTecnica;
   final String? numeroChasis;
@@ -39,6 +41,7 @@ class Bus {
     required this.estado,
     this.repuestosAsignados = const [],
     this.historialReportes = const [],
+    this.historialMantenciones = const [],
     required this.fechaRegistro,
     this.fechaRevisionTecnica,
     this.numeroChasis,
@@ -231,6 +234,7 @@ class Bus {
     'estado': estado.toString(),
     'repuestosAsignados': repuestosAsignados.map((r) => r.toJson()).toList(),
     'historialReportes': historialReportes,
+    'historialMantenciones': historialMantenciones.map((m) => m.toJson()).toList(),
     'fechaRegistro': fechaRegistro.toIso8601String(),
     'fechaRevisionTecnica': fechaRevisionTecnica?.toIso8601String(),
     'numeroChasis': numeroChasis,
@@ -255,6 +259,8 @@ class Bus {
     repuestosAsignados: (json['repuestosAsignados'] as List? ?? [])
         .map((r) => RepuestoAsignado.fromJson(r)).toList(),
     historialReportes: List<String>.from(json['historialReportes'] ?? []),
+    historialMantenciones: (json['historialMantenciones'] as List? ?? [])
+        .map((m) => Mantencion.fromJson(m)).toList(),
     fechaRegistro: DateTime.parse(json['fechaRegistro']),
     fechaRevisionTecnica: json['fechaRevisionTecnica'] != null
         ? DateTime.parse(json['fechaRevisionTecnica'])
@@ -284,6 +290,7 @@ class Bus {
     EstadoBus? estado,
     List<RepuestoAsignado>? repuestosAsignados,
     List<String>? historialReportes,
+    List<Mantencion>? historialMantenciones,
     DateTime? fechaRegistro,
     DateTime? fechaRevisionTecnica,
     String? numeroChasis,
@@ -306,6 +313,7 @@ class Bus {
       estado: estado ?? this.estado,
       repuestosAsignados: repuestosAsignados ?? this.repuestosAsignados,
       historialReportes: historialReportes ?? this.historialReportes,
+      historialMantenciones: historialMantenciones ?? this.historialMantenciones,
       fechaRegistro: fechaRegistro ?? this.fechaRegistro,
       fechaRevisionTecnica: fechaRevisionTecnica ?? this.fechaRevisionTecnica,
       numeroChasis: numeroChasis ?? this.numeroChasis,
