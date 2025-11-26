@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/bus.dart';
-import '../models/mantencion.dart';
 import '../models/repuesto.dart';
 import '../models/repuesto_asignado.dart';
 import '../models/reporte_diario.dart';
@@ -788,7 +787,6 @@ class DataService {
             modelo: row.length > 3 ? row[3].trim() : '',
             anio: row.length > 4 ? int.parse(row[4].trim()) : DateTime.now().year,
             estado: EstadoBus.disponible,
-            historialMantenciones: [],
             fechaRegistro: DateTime.now(),
             ubicacionActual: row.length > 6 ? row[6].trim() : null,
             kilometraje: row.length > 7 ? double.tryParse(row[7].trim()) : null,
@@ -1047,17 +1045,24 @@ class DataService {
   static Future<void> deleteFiltroRepuesto(String id) =>
       FirebaseService.deleteFiltroRepuesto(id);
 
-  static Future<void> deleteMantenimientoFromBus(String busId, String mantenimientoId, String tipoMantenimiento) async {
+  static Future<void> deleteMantenimientoFromBus(String busId, String mantenimientoId) async {
     final bus = await getBusById(busId);
     if (bus == null) throw Exception('Bus no encontrado para eliminar mantenimiento.');
 
-    if (tipoMantenimiento == 'nuevo') {
-      bus.mantenimientoPreventivo?.historialMantenimientos.removeWhere((m) => m.id == mantenimientoId);
-    } else { // 'antiguo'
-      bus.historialMantenciones.removeWhere((m) => m.id == mantenimientoId);
-    }
+    if (bus.mantenimientoPreventivo != null) {
+      final historial = bus.mantenimientoPreventivo!.historialMantenimientos;
+      historial.removeWhere((m) => m.id == mantenimientoId);
 
-    await updateBus(bus);
+      final mantenimientoActualizado = bus.mantenimientoPreventivo!.copyWith(
+        historialMantenimientos: historial,
+      );
+
+      final busActualizado = bus.copyWith(
+        mantenimientoPreventivo: mantenimientoActualizado,
+      );
+
+      await updateBus(busActualizado);
+    }
   }
 
   static Future<void> updateMantenimientoRegistro(String busId, RegistroMantenimiento registroActualizado) async {

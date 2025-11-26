@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/bus.dart';
-import '../models/mantencion.dart';
 import '../models/reporte_diario.dart';
 import '../models/mantenimiento_preventivo.dart';
 import '../models/tipo_mantenimiento_personalizado.dart';
-import '../screens/reporte_editor_screen.dart'; // Importar la pantalla de edición
+import '../screens/reporte_editor_screen.dart';
 import '../services/data_service.dart';
 import '../services/chilean_utils.dart';
 import '../widgets/editar_mantenimiento_dialog.dart';
@@ -43,7 +42,7 @@ class _HistorialGlobalScreenState extends State<HistorialGlobalScreen> {
       if (bus.mantenimientoPreventivo != null) {
         for (final mantenimiento in bus.mantenimientoPreventivo!.historialMantenimientos) {
           todosLosRegistros.add({
-            'tipo': 'mantenimiento_nuevo',
+            'tipo': 'mantenimiento',
             'busId': bus.id,
             'busDisplay': bus.identificadorDisplay,
             'fecha': mantenimiento.fechaUltimoCambio,
@@ -54,19 +53,6 @@ class _HistorialGlobalScreenState extends State<HistorialGlobalScreen> {
             'tipoMantenimiento': mantenimiento.tipoMantenimientoEfectivo,
           });
         }
-      }
-      for (final mantencion in bus.historialMantenciones) {
-        todosLosRegistros.add({
-          'tipo': 'mantenimiento_antiguo',
-          'busId': bus.id,
-          'busDisplay': bus.identificadorDisplay,
-          'fecha': mantencion.fecha,
-          'descripcion': mantencion.descripcion,
-          'data': mantencion,
-          'tecnico': 'No registrado',
-          'observaciones': 'Costo: ${ChileanUtils.formatCurrency(mantencion.costoTotal ?? 0)}',
-          'tipoMantenimiento': TipoMantenimiento.correctivo,
-        });
       }
     }
 
@@ -85,7 +71,18 @@ class _HistorialGlobalScreenState extends State<HistorialGlobalScreen> {
     var registrosFiltrados = todosLosRegistros.where((registro) {
       if (_filtroBusId != null) {
         if (registro['tipo'] == 'reporte') {
-          final busFiltrado = todosLosBuses.firstWhere((b) => b.id == _filtroBusId, orElse: () => Bus(id: '', patente: '', marca: '', modelo: '', anio: 0, estado: EstadoBus.disponible, historialMantenciones: [], fechaRegistro: DateTime.now()));
+          final busFiltrado = todosLosBuses.firstWhere(
+            (b) => b.id == _filtroBusId,
+            orElse: () => Bus(
+              id: '',
+              patente: '',
+              marca: '',
+              modelo: '',
+              anio: 0,
+              estado: EstadoBus.disponible,
+              fechaRegistro: DateTime.now(),
+            ),
+          );
           if (!(registro['busesReporte'] as List).contains(busFiltrado.patente)) {
             return false;
           }
@@ -347,8 +344,7 @@ class _HistorialGlobalScreenState extends State<HistorialGlobalScreen> {
         builder: (context) => ReporteEditorScreen(reporteBase: registro['data'] as ReporteDiario),
       )).then((_) => _refrescarActividades());
 
-    } else if (tipo == 'mantenimiento_nuevo') {
-      // ✅ Llama al nuevo diálogo de edición
+    } else if (tipo == 'mantenimiento') {
       final bus = await DataService.getBusById(registro['busId']);
       if (bus != null) {
         showDialog(
@@ -360,11 +356,6 @@ class _HistorialGlobalScreenState extends State<HistorialGlobalScreen> {
           ),
         );
       }
-    } else {
-      // Para mantenimientos del sistema antiguo o tipos no soportados
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('La edición para este tipo de registro aún no está implementada.'), backgroundColor: Colors.orange),
-      );
     }
   }
 
@@ -391,12 +382,9 @@ class _HistorialGlobalScreenState extends State<HistorialGlobalScreen> {
       if (registro['tipo'] == 'reporte') {
         final reporte = registro['data'] as ReporteDiario;
         await DataService.deleteReporte(reporte.id);
-      } else if (registro['tipo'] == 'mantenimiento_nuevo') {
+      } else if (registro['tipo'] == 'mantenimiento') {
         final mant = registro['data'] as RegistroMantenimiento;
-        await DataService.deleteMantenimientoFromBus(registro['busId'], mant.id, 'nuevo');
-      } else if (registro['tipo'] == 'mantenimiento_antiguo') {
-        final mant = registro['data'] as Mantencion;
-        await DataService.deleteMantenimientoFromBus(registro['busId'], mant.id, 'antiguo');
+        await DataService.deleteMantenimientoFromBus(registro['busId'], mant.id);
       }
 
       ScaffoldMessenger.of(context).showSnackBar(

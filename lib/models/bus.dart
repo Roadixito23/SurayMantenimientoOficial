@@ -1,4 +1,3 @@
-import 'mantencion.dart';
 import 'repuesto_asignado.dart';
 import 'reporte_diario.dart';
 import 'mantenimiento_preventivo.dart';
@@ -14,7 +13,6 @@ class Bus {
   final String modelo;
   final int anio;
   final EstadoBus estado;
-  final List<Mantencion> historialMantenciones;
   final List<RepuestoAsignado> repuestosAsignados;
   final List<String> historialReportes;
   final DateTime fechaRegistro;
@@ -39,7 +37,6 @@ class Bus {
     required this.modelo,
     required this.anio,
     required this.estado,
-    required this.historialMantenciones,
     this.repuestosAsignados = const [],
     this.historialReportes = const [],
     required this.fechaRegistro,
@@ -52,7 +49,7 @@ class Bus {
     this.mantenimientoPreventivo,
     this.promedioKmMensuales,
     this.ultimaActualizacionKm,
-    this.kilometrajeIdeal, // ✅ AÑADIDO AL CONSTRUCTOR
+    this.kilometrajeIdeal,
   });
 
   // Getter para mostrar identificador o patente como fallback
@@ -232,7 +229,6 @@ class Bus {
     'modelo': modelo,
     'anio': anio,
     'estado': estado.toString(),
-    'historialMantenciones': historialMantenciones.map((m) => m.toJson()).toList(),
     'repuestosAsignados': repuestosAsignados.map((r) => r.toJson()).toList(),
     'historialReportes': historialReportes,
     'fechaRegistro': fechaRegistro.toIso8601String(),
@@ -245,7 +241,7 @@ class Bus {
     'mantenimientoPreventivo': mantenimientoPreventivo?.toJson(),
     'promedioKmMensuales': promedioKmMensuales,
     'ultimaActualizacionKm': ultimaActualizacionKm?.toIso8601String(),
-    'kilometrajeIdeal': kilometrajeIdeal, // ✅ AÑADIDO A TOJSON
+    'kilometrajeIdeal': kilometrajeIdeal,
   };
 
   factory Bus.fromJson(Map<String, dynamic> json) => Bus(
@@ -256,8 +252,6 @@ class Bus {
     modelo: json['modelo'],
     anio: json['anio'],
     estado: EstadoBus.values.firstWhere((e) => e.toString() == json['estado']),
-    historialMantenciones: (json['historialMantenciones'] as List? ?? [])
-        .map((m) => Mantencion.fromJson(m)).toList(),
     repuestosAsignados: (json['repuestosAsignados'] as List? ?? [])
         .map((r) => RepuestoAsignado.fromJson(r)).toList(),
     historialReportes: List<String>.from(json['historialReportes'] ?? []),
@@ -277,7 +271,7 @@ class Bus {
     ultimaActualizacionKm: json['ultimaActualizacionKm'] != null
         ? DateTime.parse(json['ultimaActualizacionKm'])
         : null,
-    kilometrajeIdeal: json['kilometrajeIdeal']?.toDouble(), // ✅ AÑADIDO A FROMJSON
+    kilometrajeIdeal: json['kilometrajeIdeal']?.toDouble(),
   );
 
   Bus copyWith({
@@ -288,7 +282,6 @@ class Bus {
     String? modelo,
     int? anio,
     EstadoBus? estado,
-    List<Mantencion>? historialMantenciones,
     List<RepuestoAsignado>? repuestosAsignados,
     List<String>? historialReportes,
     DateTime? fechaRegistro,
@@ -301,7 +294,7 @@ class Bus {
     MantenimientoPreventivo? mantenimientoPreventivo,
     double? promedioKmMensuales,
     DateTime? ultimaActualizacionKm,
-    double? kilometrajeIdeal, // ✅ AÑADIDO A COPYWITH
+    double? kilometrajeIdeal,
   }) {
     return Bus(
       id: id ?? this.id,
@@ -311,7 +304,6 @@ class Bus {
       modelo: modelo ?? this.modelo,
       anio: anio ?? this.anio,
       estado: estado ?? this.estado,
-      historialMantenciones: historialMantenciones ?? this.historialMantenciones,
       repuestosAsignados: repuestosAsignados ?? this.repuestosAsignados,
       historialReportes: historialReportes ?? this.historialReportes,
       fechaRegistro: fechaRegistro ?? this.fechaRegistro,
@@ -324,7 +316,7 @@ class Bus {
       mantenimientoPreventivo: mantenimientoPreventivo ?? this.mantenimientoPreventivo,
       promedioKmMensuales: promedioKmMensuales ?? this.promedioKmMensuales,
       ultimaActualizacionKm: ultimaActualizacionKm ?? this.ultimaActualizacionKm,
-      kilometrajeIdeal: kilometrajeIdeal ?? this.kilometrajeIdeal, // ✅ AÑADIDO A COPYWITH
+      kilometrajeIdeal: kilometrajeIdeal ?? this.kilometrajeIdeal,
     );
   }
 }
