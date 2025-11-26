@@ -219,7 +219,7 @@ class BusManagementApp extends StatelessWidget {
         // =====================================================================
         // === Diálogos modernos ================================================
         // =====================================================================
-        dialogTheme: DialogTheme(
+        dialogTheme: DialogThemeData(
           elevation: 8,
           shadowColor: SurayColors.azulMarinoProfundo.withOpacity(0.2),
           backgroundColor: Colors.white,
