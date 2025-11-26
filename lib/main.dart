@@ -463,21 +463,29 @@ class _AppInitializerState extends State<_AppInitializer> {
                     return Transform.scale(
                       scale: value,
                       child: Container(
-                        padding: EdgeInsets.all(24),
+                        padding: EdgeInsets.all(28),
                         decoration: BoxDecoration(
-                          color: SurayColors.blancoHumo.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(28),
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF0F2744), // azulMarinoOscuro (igual que login)
+                              Color(0xFF2A4A6B), // azulMedio (igual que login)
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: SurayColors.naranjaQuemado.withOpacity(0.3),
-                              blurRadius: 20,
-                              spreadRadius: 5,
+                              color: SurayColors.naranjaQuemado.withOpacity(0.4),
+                              blurRadius: 25,
+                              spreadRadius: 8,
                             ),
                           ],
                         ),
-                        child: Text(
-                          '🚌',
-                          style: TextStyle(fontSize: 72),
+                        child: Icon(
+                          Icons.directions_bus,
+                          size: 80,
+                          color: Colors.white,
                         ),
                       ),
                     );
