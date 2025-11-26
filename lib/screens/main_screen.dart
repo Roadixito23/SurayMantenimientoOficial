@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'home_screen.dart';
 import 'dashboard_screen.dart';
 import 'buses_screen.dart';
 import 'repuestos_screen.dart';
@@ -17,6 +18,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
 
   final List<Widget> _screens = [
+    HomeScreen(),
     DashboardScreen(),
     BusesScreen(),
     RepuestosScreen(),
@@ -24,13 +26,15 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   ];
 
   final List<String> _titles = [
+    'Inicio',
     'Panel Principal',
-    'Gestión de Buses',
+    'Gestión de Flota',
     'Repuestos',
     'Reportes Diarios',
   ];
 
   final List<IconData> _icons = [
+    Icons.home,
     Icons.dashboard,
     Icons.directions_bus,
     Icons.build,
@@ -42,9 +46,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     'Alt+2',
     'Alt+3',
     'Alt+4',
+    'Alt+5',
   ];
 
   final List<String> _descriptions = [
+    'Vista rápida de la flota',
     'Resumen general del sistema',
     'Gestión completa de la flota',
     'Inventario y catálogo de repuestos',
@@ -75,6 +81,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit2): () => _navigateTo(1),
           LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit3): () => _navigateTo(2),
           LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit4): () => _navigateTo(3),
+          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit5): () => _navigateTo(4),
           LogicalKeySet(LogicalKeyboardKey.f5): () => _refreshCurrentScreen(),
           LogicalKeySet(LogicalKeyboardKey.escape): () => _showShortcutsDialog(),
         },
@@ -245,29 +252,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           // Herramientas de la barra superior
           Row(
             children: [
-              // Búsqueda global
-              Container(
-                width: 250,
-                height: 35,
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Buscar globalmente... (Ctrl+K)',
-                    hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
-                    prefixIcon: Icon(Icons.search, color: Colors.white70, size: 20),
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16),
-                  ),
-                  style: TextStyle(color: Colors.white, fontSize: 14),
-                ),
-              ),
-
-              SizedBox(width: 16),
-
               // Botones de acción
               _buildTopBarButton(
                 icon: Icons.refresh,
@@ -275,11 +259,15 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 onPressed: _refreshCurrentScreen,
               ),
 
+              SizedBox(width: 8),
+
               _buildTopBarButton(
                 icon: Icons.help_outline,
                 tooltip: 'Atajos de teclado (Esc)',
                 onPressed: _showShortcutsDialog,
               ),
+
+              SizedBox(width: 8),
 
               _buildTopBarButton(
                 icon: Icons.settings,
@@ -783,13 +771,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildShortcutRow('Alt + 1', 'Panel Principal'),
-              _buildShortcutRow('Alt + 2', 'Gestión de Buses'),
-              _buildShortcutRow('Alt + 3', 'Repuestos'),
-              _buildShortcutRow('Alt + 4', 'Reportes'),
+              _buildShortcutRow('Alt + 1', 'Inicio'),
+              _buildShortcutRow('Alt + 2', 'Panel Principal'),
+              _buildShortcutRow('Alt + 3', 'Gestión de Flota'),
+              _buildShortcutRow('Alt + 4', 'Repuestos'),
+              _buildShortcutRow('Alt + 5', 'Reportes'),
               Divider(),
               _buildShortcutRow('F5', 'Actualizar pantalla'),
-              _buildShortcutRow('Ctrl + K', 'Búsqueda global'),
               _buildShortcutRow('Esc', 'Mostrar esta ayuda'),
             ],
           ),
