@@ -1,13 +1,16 @@
 {
-    "name": "Mantenimiento Suray",
-    "short_name": "MantSuray",
+    "name": "Sistema de Gestión de Buses - Suray v2.0.23",
+    "short_name": "Suray Buses",
     "start_url": ".",
-    "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Proyecto de mantenimiento de Suray",
-    "orientation": "portrait-primary",
+    "display": "fullscreen",
+    "display_override": ["fullscreen", "standalone", "minimal-ui"],
+    "background_color": "#1A3B5C",
+    "theme_color": "#1A3B5C",
+    "description": "Sistema de Gestión de Buses para Suray - Mantenimiento y Control de Flota v2.0.23",
+    "orientation": "any",
     "prefer_related_applications": false,
+    "scope": "/",
+    "categories": ["business", "productivity", "utilities"],
     "icons": [
         {
             "src": "icons/Icon-192.png",
