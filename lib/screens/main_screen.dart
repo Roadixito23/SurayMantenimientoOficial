@@ -5,6 +5,7 @@ import 'dashboard_screen.dart';
 import 'buses_screen.dart';
 import 'repuestos_screen.dart';
 import 'reportes_screen.dart';
+import 'settings_screen.dart';
 import '../main.dart'; // Para acceder a SurayColors
 
 class MainScreen extends StatefulWidget {
@@ -74,7 +75,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 800; // Pantallas menores a 800px
+
     return Scaffold(
+      // Drawer para pantallas pequeñas
+      drawer: isSmallScreen ? _buildDrawer() : null,
+      // BottomNavigationBar para pantallas muy pequeñas (móvil)
+      bottomNavigationBar: size.width < 600 ? _buildBottomNavigationBar() : null,
       body: CallbackShortcuts(
         bindings: {
           LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit1): () => _navigateTo(0),
@@ -90,20 +98,20 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           child: Column(
             children: [
               // Barra superior mejorada
-              _buildTopAppBar(),
+              _buildTopAppBar(isSmallScreen),
 
-              // Breadcrumbs
-              _buildBreadcrumbs(),
+              // Breadcrumbs (ocultar en pantallas muy pequeñas)
+              if (size.width >= 600) _buildBreadcrumbs(),
 
               // Contenido principal
               Expanded(
                 child: Row(
                   children: [
-                    // Navegación lateral expandible
-                    _buildNavigationRail(),
-
-                    // Divisor
-                    VerticalDivider(thickness: 1, width: 1),
+                    // Navegación lateral expandible (solo en pantallas grandes)
+                    if (!isSmallScreen) ...[
+                      _buildNavigationRail(),
+                      VerticalDivider(thickness: 1, width: 1),
+                    ],
 
                     // Área de contenido principal
                     Expanded(
@@ -111,8 +119,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         color: SurayColors.blancoHumo,
                         child: Column(
                           children: [
-                            // Barra de herramientas contextual
-                            _buildContextualToolbar(),
+                            // Barra de herramientas contextual (ocultar en móvil)
+                            if (size.width >= 600) _buildContextualToolbar(),
 
                             // Contenido de la pantalla
                             Expanded(
@@ -144,8 +152,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 ),
               ),
 
-              // Barra de estado
-              _buildStatusBar(),
+              // Barra de estado (ocultar en pantallas pequeñas si hay BottomNavigationBar)
+              if (size.width >= 600) _buildStatusBar(),
             ],
           ),
         ),
@@ -153,7 +161,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildTopAppBar() {
+  Widget _buildTopAppBar(bool isSmallScreen) {
     return Container(
       height: 60,
       decoration: BoxDecoration(
@@ -172,19 +180,23 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       ),
       child: Row(
         children: [
-          // Botón para contraer/expandir navegación
+          // Botón de menú (Drawer para móvil, toggle para desktop)
           Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                setState(() {
-                  _isRailExtended = !_isRailExtended;
-                });
+                if (isSmallScreen) {
+                  Scaffold.of(context).openDrawer();
+                } else {
+                  setState(() {
+                    _isRailExtended = !_isRailExtended;
+                  });
+                }
               },
               child: Container(
                 width: 60,
                 child: Icon(
-                  _isRailExtended ? Icons.menu_open : Icons.menu,
+                  isSmallScreen ? Icons.menu : (_isRailExtended ? Icons.menu_open : Icons.menu),
                   color: Colors.white,
                 ),
               ),
@@ -827,54 +839,135 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   }
 
   void _showSettings() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
+    // Navegar a la pantalla de Settings
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => SettingsScreen()),
+    ).then((_) {
+      // Refrescar la pantalla cuando se regrese
+      setState(() {});
+    });
+  }
+
+  // Drawer para pantallas pequeñas
+  Widget _buildDrawer() {
+    return Drawer(
+      child: Container(
+        color: Colors.white,
+        child: ListView(
+          padding: EdgeInsets.zero,
           children: [
-            Icon(Icons.settings, color: SurayColors.azulMarinoProfundo),
-            SizedBox(width: 8),
-            Text('Configuración'),
-          ],
-        ),
-        content: Container(
-          width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SwitchListTile(
-                title: Text('Navegación extendida'),
-                subtitle: Text('Mostrar descripciones en el menú lateral'),
-                value: _isRailExtended,
-                onChanged: (value) {
-                  setState(() {
-                    _isRailExtended = value;
-                  });
+            DrawerHeader(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    SurayColors.azulMarinoProfundo,
+                    SurayColors.azulMarinoClaro,
+                  ],
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: SurayColors.naranjaQuemado,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.directions_bus, color: Colors.white, size: 32),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Gestión de Buses',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Suray v2.0.23',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ...List.generate(_titles.length, (index) {
+              return ListTile(
+                leading: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _selectedIndex == index
+                        ? SurayColors.azulMarinoProfundo
+                        : SurayColors.grisAntracita.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    _icons[index],
+                    color: _selectedIndex == index
+                        ? Colors.white
+                        : SurayColors.grisAntracita,
+                  ),
+                ),
+                title: Text(
+                  _titles[index],
+                  style: TextStyle(
+                    fontWeight:
+                        _selectedIndex == index ? FontWeight.bold : FontWeight.normal,
+                    color: _selectedIndex == index
+                        ? SurayColors.azulMarinoProfundo
+                        : SurayColors.grisAntracita,
+                  ),
+                ),
+                subtitle: Text(
+                  _descriptions[index],
+                  style: TextStyle(fontSize: 12),
+                ),
+                selected: _selectedIndex == index,
+                onTap: () {
+                  _navigateTo(index);
                   Navigator.pop(context);
                 },
-              ),
-              SwitchListTile(
-                title: Text('Animaciones'),
-                subtitle: Text('Efectos de transición entre pantallas'),
-                value: true,
-                onChanged: (value) {},
-              ),
-              SwitchListTile(
-                title: Text('Notificaciones'),
-                subtitle: Text('Alertas del sistema'),
-                value: true,
-                onChanged: (value) {},
-              ),
-            ],
-          ),
+              );
+            }),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.settings, color: SurayColors.azulMarinoProfundo),
+              title: Text('Configuración'),
+              onTap: () {
+                Navigator.pop(context);
+                _showSettings();
+              },
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cerrar'),
-          ),
-        ],
       ),
+    );
+  }
+
+  // BottomNavigationBar para pantallas muy pequeñas
+  Widget _buildBottomNavigationBar() {
+    return BottomNavigationBar(
+      currentIndex: _selectedIndex,
+      onTap: _navigateTo,
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: Colors.white,
+      selectedItemColor: SurayColors.azulMarinoProfundo,
+      unselectedItemColor: SurayColors.grisAntracita,
+      selectedFontSize: 12,
+      unselectedFontSize: 11,
+      items: List.generate(_titles.length, (index) {
+        return BottomNavigationBarItem(
+          icon: Icon(_icons[index]),
+          label: _titles[index],
+          tooltip: _descriptions[index],
+        );
+      }),
     );
   }
 }

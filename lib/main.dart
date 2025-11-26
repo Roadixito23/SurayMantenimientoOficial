@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; // Archivo generado por FlutterFire CLI
 import 'screens/main_screen.dart';
+import 'screens/login_screen.dart';
 import 'services/firebase_service.dart';
+import 'services/auth_service.dart';
 
 // =====================================================================
 // === COLORES CORPORATIVOS SURAY v2.0.23 ==============================
@@ -36,6 +38,11 @@ void main() async {
     await FirebaseService.initializeSampleData();
     print('✅ Datos de ejemplo verificados/inicializados');
 
+    // Inicializar usuarios predeterminados
+    print('👤 Verificando usuarios predeterminados...');
+    await AuthService.initializeDefaultUsers();
+    print('✅ Usuarios predeterminados verificados/inicializados');
+
     print('🎉 Aplicación lista para usar');
   } catch (e) {
     print('❌ Error crítico al inicializar la aplicación: $e');
@@ -58,6 +65,17 @@ class BusManagementApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Sistema de Gestión de Buses - Suray v2.0.23',
+      // Builder para ajustar el zoom y hacer la app responsive
+      builder: (context, child) {
+        return MediaQuery(
+          // Ajustar el textScaleFactor para compensar el escalado de Windows
+          // Si Windows está al 150%, necesitamos reducir el texto a ~0.67 (1/1.5)
+          data: MediaQuery.of(context).copyWith(
+            textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.67, 1.0),
+          ),
+          child: child!,
+        );
+      },
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -559,6 +577,7 @@ class _AppInitializerState extends State<_AppInitializer> {
       );
     }
 
-    return MainScreen();
+    // Si está inicializado, mostrar LoginScreen
+    return LoginScreen();
   }
 }
