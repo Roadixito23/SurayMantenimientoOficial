@@ -15,9 +15,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _nuevaContrasenaController = TextEditingController();
   final _confirmarContrasenaController = TextEditingController();
 
+  // Controladores para crear nuevo usuario
+  final _nuevoUsuarioNombreController = TextEditingController();
+  final _nuevoUsuarioContrasenaController = TextEditingController();
+
   bool _obscureCurrentPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
+  bool _obscureNewUserPassword = true;
 
   @override
   void initState() {
@@ -34,6 +39,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _contrasenaActualController.dispose();
     _nuevaContrasenaController.dispose();
     _confirmarContrasenaController.dispose();
+    _nuevoUsuarioNombreController.dispose();
+    _nuevoUsuarioContrasenaController.dispose();
     super.dispose();
   }
 
@@ -85,6 +92,153 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } else {
       _mostrarError('Contraseña actual incorrecta');
     }
+  }
+
+  Future<void> _crearNuevoUsuario() async {
+    if (_nuevoUsuarioNombreController.text.trim().isEmpty ||
+        _nuevoUsuarioContrasenaController.text.isEmpty) {
+      _mostrarError('Todos los campos son obligatorios');
+      return;
+    }
+
+    if (_nuevoUsuarioContrasenaController.text.length != 8) {
+      _mostrarError('La contraseña debe tener 8 dígitos');
+      return;
+    }
+
+    final resultado = await AuthService.crearUsuario(
+      nombreUsuario: _nuevoUsuarioNombreController.text.trim(),
+      contrasena: _nuevoUsuarioContrasenaController.text,
+    );
+
+    if (resultado['success']) {
+      _mostrarExito(resultado['message']);
+      _nuevoUsuarioNombreController.clear();
+      _nuevoUsuarioContrasenaController.clear();
+      setState(() {}); // Refrescar la lista de usuarios
+      Navigator.pop(context); // Cerrar el diálogo
+    } else {
+      _mostrarError(resultado['message']);
+    }
+  }
+
+  Future<void> _eliminarUsuario(String userId, String nombreUsuario) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Confirmar Eliminación'),
+          ],
+        ),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar al usuario "$nombreUsuario"?\n\nEsta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado == true) {
+      final resultado = await AuthService.eliminarUsuario(userId);
+      if (resultado['success']) {
+        _mostrarExito(resultado['message']);
+        setState(() {}); // Refrescar la lista
+      } else {
+        _mostrarError(resultado['message']);
+      }
+    }
+  }
+
+  void _mostrarDialogoCrearUsuario() {
+    _nuevoUsuarioNombreController.clear();
+    _nuevoUsuarioContrasenaController.clear();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.person_add, color: SurayColors.azulMarinoProfundo),
+            SizedBox(width: 8),
+            Text('Crear Nuevo Usuario'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nuevoUsuarioNombreController,
+                decoration: InputDecoration(
+                  labelText: 'Nombre de usuario',
+                  prefixIcon: Icon(Icons.person),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: _nuevoUsuarioContrasenaController,
+                obscureText: _obscureNewUserPassword,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(8),
+                ],
+                decoration: InputDecoration(
+                  labelText: 'Contraseña (8 dígitos)',
+                  prefixIcon: Icon(Icons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureNewUserPassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureNewUserPassword = !_obscureNewUserPassword;
+                      });
+                      // Forzar rebuild del diálogo
+                      Navigator.pop(context);
+                      _mostrarDialogoCrearUsuario();
+                    },
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: _crearNuevoUsuario,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SurayColors.azulMarinoProfundo,
+            ),
+            child: Text('Crear Usuario'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _cerrarSesion() {
@@ -185,6 +339,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // Sección: Cambiar contraseña
             _buildChangePasswordCard(),
+            SizedBox(height: 24),
+
+            // Sección: Gestión de usuarios
+            _buildUserManagementCard(),
             SizedBox(height: 24),
 
             // Botón de cerrar sesión
@@ -486,6 +644,204 @@ class _SettingsScreenState extends State<SettingsScreen> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: SurayColors.azulMarinoProfundo, width: 2),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserManagementCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: SurayColors.azulMarinoProfundo.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.people,
+                        color: SurayColors.azulMarinoProfundo,
+                        size: 24,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Gestión de Usuarios',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: SurayColors.azulMarinoProfundo,
+                      ),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  onPressed: _mostrarDialogoCrearUsuario,
+                  icon: Icon(Icons.person_add, color: SurayColors.naranjaQuemado),
+                  tooltip: 'Crear nuevo usuario',
+                  style: IconButton.styleFrom(
+                    backgroundColor: SurayColors.naranjaQuemado.withOpacity(0.1),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+
+            // Lista de usuarios
+            FutureBuilder(
+              future: AuthService.obtenerUsuarios(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text(
+                        'Error al cargar usuarios',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  );
+                }
+
+                final usuarios = snapshot.data ?? [];
+
+                if (usuarios.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text(
+                        'No hay usuarios registrados',
+                        style: TextStyle(color: SurayColors.grisAntracita),
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: usuarios.map((usuario) {
+                    final esUsuarioActual = usuario.id == AuthService.usuarioActual?.id;
+                    return Container(
+                      margin: EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: esUsuarioActual
+                            ? SurayColors.naranjaQuemado.withOpacity(0.1)
+                            : SurayColors.blancoHumo,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: esUsuarioActual
+                              ? SurayColors.naranjaQuemado.withOpacity(0.3)
+                              : SurayColors.grisAntracita.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: ListTile(
+                        leading: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: esUsuarioActual
+                                ? SurayColors.naranjaQuemado
+                                : SurayColors.azulMarinoProfundo,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                usuario.nombreUsuario,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: SurayColors.azulMarinoProfundo,
+                                ),
+                              ),
+                            ),
+                            if (esUsuarioActual)
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: SurayColors.naranjaQuemado,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Tú',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        subtitle: Text(
+                          'Creado: ${_formatDate(usuario.fechaCreacion)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: SurayColors.grisAntracita,
+                          ),
+                        ),
+                        trailing: !esUsuarioActual
+                            ? IconButton(
+                                icon: Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _eliminarUsuario(
+                                  usuario.id,
+                                  usuario.nombreUsuario,
+                                ),
+                                tooltip: 'Eliminar usuario',
+                              )
+                            : null,
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+
+            SizedBox(height: 16),
+
+            // Botón para crear usuario
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: _mostrarDialogoCrearUsuario,
+                icon: Icon(Icons.person_add),
+                label: Text('Crear Nuevo Usuario'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: SurayColors.azulMarinoProfundo,
+                  side: BorderSide(color: SurayColors.azulMarinoProfundo, width: 2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

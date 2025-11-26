@@ -155,4 +155,120 @@ class AuthService {
   static bool haySesionActiva() {
     return _usuarioActual != null;
   }
+
+  // Crear un nuevo usuario
+  static Future<Map<String, dynamic>> crearUsuario({
+    required String nombreUsuario,
+    required String contrasena,
+  }) async {
+    try {
+      print('📝 Creando nuevo usuario: $nombreUsuario');
+
+      // Validar que el nombre de usuario no esté vacío
+      if (nombreUsuario.trim().isEmpty) {
+        return {
+          'success': false,
+          'message': 'El nombre de usuario no puede estar vacío',
+        };
+      }
+
+      // Validar que la contraseña tenga 8 dígitos
+      if (contrasena.length != 8 || !RegExp(r'^\d{8}$').hasMatch(contrasena)) {
+        return {
+          'success': false,
+          'message': 'La contraseña debe tener exactamente 8 dígitos',
+        };
+      }
+
+      // Verificar que no exista un usuario con el mismo nombre
+      final existingUser = await _firestore
+          .collection(_collectionName)
+          .where('nombreUsuario', isEqualTo: nombreUsuario.trim())
+          .limit(1)
+          .get();
+
+      if (existingUser.docs.isNotEmpty) {
+        return {
+          'success': false,
+          'message': 'Ya existe un usuario con ese nombre',
+        };
+      }
+
+      // Crear el nuevo usuario
+      final docRef = await _firestore.collection(_collectionName).add({
+        'nombreUsuario': nombreUsuario.trim(),
+        'contrasena': contrasena,
+        'fechaCreacion': Timestamp.now(),
+        'ultimaActualizacion': null,
+      });
+
+      print('✅ Usuario creado exitosamente con ID: ${docRef.id}');
+      return {
+        'success': true,
+        'message': 'Usuario creado exitosamente',
+        'userId': docRef.id,
+      };
+    } catch (e) {
+      print('❌ Error al crear usuario: $e');
+      return {
+        'success': false,
+        'message': 'Error al crear usuario: $e',
+      };
+    }
+  }
+
+  // Eliminar un usuario
+  static Future<Map<String, dynamic>> eliminarUsuario(String userId) async {
+    try {
+      print('🗑️ Eliminando usuario con ID: $userId');
+
+      // Evitar que el usuario actual se elimine a sí mismo
+      if (_usuarioActual?.id == userId) {
+        return {
+          'success': false,
+          'message': 'No puedes eliminar tu propia cuenta mientras estás conectado',
+        };
+      }
+
+      // Verificar que el usuario existe
+      final doc = await _firestore.collection(_collectionName).doc(userId).get();
+      if (!doc.exists) {
+        return {
+          'success': false,
+          'message': 'El usuario no existe',
+        };
+      }
+
+      // Eliminar el usuario
+      await _firestore.collection(_collectionName).doc(userId).delete();
+
+      print('✅ Usuario eliminado exitosamente');
+      return {
+        'success': true,
+        'message': 'Usuario eliminado exitosamente',
+      };
+    } catch (e) {
+      print('❌ Error al eliminar usuario: $e');
+      return {
+        'success': false,
+        'message': 'Error al eliminar usuario: $e',
+      };
+    }
+  }
+
+  // Verificar si un nombre de usuario está disponible
+  static Future<bool> esNombreUsuarioDisponible(String nombreUsuario) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection(_collectionName)
+          .where('nombreUsuario', isEqualTo: nombreUsuario.trim())
+          .limit(1)
+          .get();
+
+      return querySnapshot.docs.isEmpty;
+    } catch (e) {
+      print('❌ Error al verificar disponibilidad: $e');
+      return false;
+    }
+  }
 }

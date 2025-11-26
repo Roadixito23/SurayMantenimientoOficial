@@ -91,6 +91,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       );
 
       if (usuario != null) {
+        // Notificar al sistema que el autocompletado está completo
+        TextInput.finishAutofillContext();
+
         // Login exitoso - navegar a MainScreen
         if (mounted) {
           Navigator.of(context).pushReplacement(
@@ -174,93 +177,90 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       ),
       child: Padding(
         padding: EdgeInsets.all(isSmallScreen ? 24 : 40),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Logo animado
-              _buildLogo(),
-              SizedBox(height: 32),
+        child: AutofillGroup(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Logo animado
+                _buildLogo(),
+                SizedBox(height: 32),
 
-              // Título
-              Text(
-                'Sistema de Gestión de Buses',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 22 : 26,
-                  fontWeight: FontWeight.bold,
-                  color: LoginColors.azulMarinoOscuro,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Suray - Mantenimiento y Control',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 14 : 16,
-                  color: LoginColors.azulMedio,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              SizedBox(height: 40),
-
-              // Campo de usuario
-              _buildTextField(
-                controller: _usuarioController,
-                label: 'Usuario',
-                icon: Icons.person,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingrese su usuario';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 20),
-
-              // Campo de contraseña
-              _buildPasswordField(),
-              SizedBox(height: 12),
-
-              // Mensaje de error
-              if (_errorMessage != null)
-                Container(
-                  padding: EdgeInsets.all(12),
-                  margin: EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red[300]!, width: 1),
+                // Título
+                Text(
+                  'Sistema de Gestión de Buses',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 22 : 26,
+                    fontWeight: FontWeight.bold,
+                    color: LoginColors.azulMarinoOscuro,
+                    letterSpacing: 0.5,
                   ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.red, size: 20),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: TextStyle(
-                            color: Colors.red[800],
-                            fontSize: 14,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Suray - Mantenimiento y Control',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    color: LoginColors.azulMedio,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 40),
+
+                // Campo de usuario
+                _buildTextField(
+                  controller: _usuarioController,
+                  label: 'Usuario',
+                  icon: Icons.person,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor ingrese su usuario';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+
+                // Campo de contraseña
+                _buildPasswordField(),
+                SizedBox(height: 12),
+
+                // Mensaje de error
+                if (_errorMessage != null)
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    margin: EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red[300]!, width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.red, size: 20),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: TextStyle(
+                              color: Colors.red[800],
+                              fontSize: 14,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
 
-              SizedBox(height: 32),
+                SizedBox(height: 32),
 
-              // Botón de login
-              _buildLoginButton(isSmallScreen),
-
-              SizedBox(height: 24),
-
-              // Información adicional
-              _buildInfoSection(),
-            ],
+                // Botón de login
+                _buildLoginButton(isSmallScreen),
+              ],
+            ),
           ),
         ),
       ),
@@ -313,6 +313,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       controller: controller,
       validator: validator,
       style: TextStyle(fontSize: 16),
+      autofillHints: [AutofillHints.username],
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: LoginColors.azulMedio),
@@ -345,6 +346,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       controller: _contrasenaController,
       obscureText: _obscurePassword,
       keyboardType: TextInputType.number,
+      autofillHints: [AutofillHints.password],
       inputFormatters: [
         FilteringTextInputFormatter.digitsOnly,
         LengthLimitingTextInputFormatter(8),
@@ -450,54 +452,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   ),
                 ],
               ),
-      ),
-    );
-  }
-
-  Widget _buildInfoSection() {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: LoginColors.naranjaSuave.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: LoginColors.naranjaSuave.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.info_outline,
-                size: 18,
-                color: LoginColors.azulMedio,
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Usuarios disponibles:',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: LoginColors.azulMarinoOscuro,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Usuario / Dante\nContraseña: 12345678',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: LoginColors.azulMedio,
-              height: 1.5,
-            ),
-          ),
-        ],
       ),
     );
   }
