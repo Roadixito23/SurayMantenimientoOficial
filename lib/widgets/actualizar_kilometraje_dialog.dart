@@ -54,7 +54,7 @@ class _ActualizarKilometrajeDialogState extends State<ActualizarKilometrajeDialo
         ultimaActualizacionKm: DateTime.now(),
       );
 
-      await DataService().updateBus(busActualizado);
+      await DataService.updateBus(busActualizado);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,3 +1,5 @@
+import 'dart:core';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:html' as html;
@@ -32,7 +34,7 @@ class _ReporteMaquinaDialogState extends State<ReporteMaquinaDialog> {
     setState(() => _isSearching = true);
 
     try {
-      final buses = await DataService().getBuses();
+      final buses = await DataService.getBuses();
 
       // Buscar por patente o número de máquina (identificador)
       final resultados = buses.where((bus) {
@@ -94,7 +96,7 @@ class _ReporteMaquinaDialogState extends State<ReporteMaquinaDialog> {
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.warning_outline, color: Colors.white),
+              Icon(Icons.warning_outlined, color: Colors.white),
               SizedBox(width: 12),
               Text('Por favor selecciona una máquina'),
             ],
@@ -177,8 +179,8 @@ class _ReporteMaquinaDialogState extends State<ReporteMaquinaDialog> {
   void _abrirVentanaImpresion(String htmlContent) {
     final printWindow = html.window.open('', '_blank', 'width=800,height=600');
     if (printWindow != null) {
-      printWindow.document?.write(htmlContent);
-      printWindow.document?.close();
+      printWindow.html.document?.write(htmlContent);
+      printWindow.html.document?.close();
 
       // Esperar a que cargue y luego imprimir
       Future.delayed(Duration(milliseconds: 500), () {
