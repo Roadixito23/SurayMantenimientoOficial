@@ -179,8 +179,8 @@ class _ReporteMaquinaDialogState extends State<ReporteMaquinaDialog> {
   void _abrirVentanaImpresion(String htmlContent) {
     final printWindow = html.window.open('', '_blank', 'width=800,height=600');
     if (printWindow != null) {
-      printWindow.html.document?.write(htmlContent);
-      printWindow.html.document?.close();
+      printWindow.document?.write(htmlContent);
+      printWindow.document?.close();
 
       // Esperar a que cargue y luego imprimir
       Future.delayed(Duration(milliseconds: 500), () {
@@ -240,7 +240,7 @@ class _ReporteMaquinaDialogState extends State<ReporteMaquinaDialog> {
         for (var mant in mantencionesEnPeriodo) {
           historialHTML += '<tr>';
           historialHTML += '<td style="border: 1px solid #ddd; padding: 8px;">${DateFormat('dd/MM/yyyy').format(mant.fechaUltimoCambio)}</td>';
-          historialHTML += '<td style="border: 1px solid #ddd; padding: 8px;">${mant.tipo}</td>';
+          historialHTML += '<td style="border: 1px solid #ddd; padding: 8px;">${mant.descripcionTipo}</td>';
           historialHTML += '<td style="border: 1px solid #ddd; padding: 8px;">${mant.kilometrajeUltimoCambio?.toStringAsFixed(0) ?? 'N/A'} km</td>';
           historialHTML += '<td style="border: 1px solid #ddd; padding: 8px;">${mant.tecnicoResponsable ?? 'No especificado'}</td>';
           historialHTML += '<td style="border: 1px solid #ddd; padding: 8px;">${mant.observaciones ?? '-'}</td>';
@@ -264,7 +264,7 @@ class _ReporteMaquinaDialogState extends State<ReporteMaquinaDialog> {
       for (var mant in mantenciones.take(10)) {
         historialHTML += '<tr>';
         historialHTML += '<td style="border: 1px solid #ddd; padding: 8px;">${DateFormat('dd/MM/yyyy').format(mant.fechaUltimoCambio)}</td>';
-        historialHTML += '<td style="border: 1px solid #ddd; padding: 8px;">${mant.tipo}</td>';
+        historialHTML += '<td style="border: 1px solid #ddd; padding: 8px;">${mant.descripcionTipo}</td>';
         historialHTML += '<td style="border: 1px solid #ddd; padding: 8px;">${mant.kilometrajeUltimoCambio?.toStringAsFixed(0) ?? 'N/A'} km</td>';
         historialHTML += '<td style="border: 1px solid #ddd; padding: 8px;">${mant.tecnicoResponsable ?? 'No especificado'}</td>';
         historialHTML += '</tr>';
