@@ -13,6 +13,7 @@ import '../widgets/bus_form_dialog.dart';
 import '../widgets/historial_completo_dialog.dart';
 import '../widgets/mantenimiento_preventivo_dialog.dart';
 import '../widgets/asignar_repuesto_dialog.dart';
+import '../widgets/actualizar_kilometraje_dialog.dart';
 
 class BusesScreen extends StatefulWidget {
   @override
@@ -1001,23 +1002,14 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Acciones principales
                     _buildActionOption(
-                      icon: Icons.build_circle,
-                      label: 'Asignar Repuesto',
+                      icon: Icons.speed,
+                      label: 'Actualizar Kilometraje',
                       color: SurayColors.azulMarinoProfundo,
                       onTap: () {
                         Navigator.pop(ctx);
-                        _asignarRepuesto(context, bus);
-                      },
-                    ),
-                    SizedBox(height: 8),
-                    _buildActionOption(
-                      icon: Icons.history,
-                      label: 'Historial Completo',
-                      color: SurayColors.azulMarinoClaro,
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _mostrarHistorialCompleto(context, bus);
+                        _actualizarKilometraje(context, bus);
                       },
                     ),
                     SizedBox(height: 8),
@@ -1032,19 +1024,49 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
                     ),
                     SizedBox(height: 8),
                     _buildActionOption(
+                      icon: Icons.build_circle,
+                      label: 'Asignar Repuesto',
+                      color: SurayColors.azulMarinoClaro,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _asignarRepuesto(context, bus);
+                      },
+                    ),
+                    SizedBox(height: 8),
+                    _buildActionOption(
+                      icon: Icons.history,
+                      label: 'Historial Completo',
+                      color: Color(0xFF607D8B),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _mostrarHistorialCompleto(context, bus);
+                      },
+                    ),
+
+                    // Divisor para acciones secundarias
+                    SizedBox(height: 12),
+                    Divider(color: SurayColors.grisAntracitaClaro.withOpacity(0.3)),
+                    SizedBox(height: 4),
+
+                    // Acciones secundarias (menos frecuentes)
+                    _buildActionOption(
                       icon: Icons.edit,
                       label: 'Editar Bus',
                       color: SurayColors.grisAntracita,
+                      iconSize: 16,
+                      isSecondary: true,
                       onTap: () {
                         Navigator.pop(ctx);
                         _mostrarDialogoBus(context, bus: bus);
                       },
                     ),
-                    SizedBox(height: 8),
+                    SizedBox(height: 6),
                     _buildActionOption(
                       icon: Icons.delete_forever,
                       label: 'Eliminar Bus',
                       color: Colors.red,
+                      iconSize: 16,
+                      isSecondary: true,
                       onTap: () {
                         Navigator.pop(ctx);
                         _eliminarBus(bus.id);
@@ -1071,12 +1093,17 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
     required String label,
     required Color color,
     required VoidCallback onTap,
+    double iconSize = 20,
+    bool isSecondary = false,
   }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: isSecondary ? 10 : 14,
+        ),
         decoration: BoxDecoration(
           color: color.withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
@@ -1088,25 +1115,29 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
         child: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(8),
+              padding: EdgeInsets.all(isSecondary ? 6 : 8),
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: Colors.white, size: 20),
+              child: Icon(icon, color: Colors.white, size: iconSize),
             ),
             SizedBox(width: 16),
             Expanded(
               child: Text(
                 label,
                 style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
+                  fontSize: isSecondary ? 13 : 15,
+                  fontWeight: isSecondary ? FontWeight.w400 : FontWeight.w500,
                   color: color,
                 ),
               ),
             ),
-            Icon(Icons.chevron_right, color: color.withOpacity(0.5)),
+            Icon(
+              Icons.chevron_right,
+              color: color.withOpacity(0.5),
+              size: isSecondary ? 18 : 24,
+            ),
           ],
         ),
       ),
@@ -1431,6 +1462,30 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
               child: MantenimientoPreventivoDialog(
                 bus: bus,
                 onMantenimientoRegistrado: () => setState(() {}),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _actualizarKilometraje(BuildContext context, Bus bus) {
+    showDialog(
+      context: context,
+      barrierColor: SurayColors.azulMarinoProfundo.withOpacity(0.5),
+      builder: (_) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: 0.8 + (0.2 * value),
+            child: Opacity(
+              opacity: value,
+              child: ActualizarKilometrajeDialog(
+                bus: bus,
+                onKilometrajeActualizado: () => setState(() {}),
               ),
             ),
           );

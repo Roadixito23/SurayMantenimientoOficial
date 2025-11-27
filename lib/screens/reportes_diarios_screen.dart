@@ -4,6 +4,8 @@ import '../models/reporte_diario.dart';
 import '../services/data_service.dart';
 import '../services/chilean_utils.dart';
 import 'reporte_editor_screen.dart';
+import '../widgets/reporte_maquina_dialog.dart';
+import '../main.dart';
 
 class ReportesDiariosScreen extends StatefulWidget {
   @override
@@ -89,15 +91,30 @@ class _ReportesDiariosScreenState extends State<ReportesDiariosScreen> {
                   ),
                 ],
               ),
-              ElevatedButton.icon(
-                onPressed: () => _crearNuevoReporte(),
-                icon: Icon(Icons.add),
-                label: Text('Nuevo Reporte'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF1565C0),
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                ),
+              Row(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _mostrarDialogoReportePDF(),
+                    icon: Icon(Icons.picture_as_pdf),
+                    label: Text('Reporte de Máquina'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SurayColors.naranjaQuemado,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => _crearNuevoReporte(),
+                    icon: Icon(Icons.add),
+                    label: Text('Nuevo Reporte'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SurayColors.azulMarinoProfundo,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -601,6 +618,14 @@ class _ReportesDiariosScreenState extends State<ReportesDiariosScreen> {
       _filtroTexto = '';
       _searchController.clear();
     });
+  }
+
+  void _mostrarDialogoReportePDF() {
+    showDialog(
+      context: context,
+      barrierColor: SurayColors.azulMarinoProfundo.withOpacity(0.5),
+      builder: (ctx) => ReporteMaquinaDialog(),
+    );
   }
 
   void _crearNuevoReporte() {

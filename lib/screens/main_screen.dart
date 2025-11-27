@@ -17,6 +17,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   int _selectedIndex = 0;
   bool _isRailExtended = true;
   late AnimationController _animationController;
+  double _zoomLevel = 1.0; // Nivel de zoom (1.0 = 100%)
 
   final List<Widget> _screens = [
     HomeScreen(),
@@ -115,36 +116,40 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
                     // Área de contenido principal
                     Expanded(
-                      child: Container(
-                        color: SurayColors.blancoHumo,
-                        child: Column(
-                          children: [
-                            // Barra de herramientas contextual (ocultar en móvil)
-                            if (size.width >= 600) _buildContextualToolbar(),
+                      child: Transform.scale(
+                        scale: _zoomLevel,
+                        alignment: Alignment.topLeft,
+                        child: Container(
+                          color: SurayColors.blancoHumo,
+                          child: Column(
+                            children: [
+                              // Barra de herramientas contextual (ocultar en móvil)
+                              if (size.width >= 600) _buildContextualToolbar(),
 
-                            // Contenido de la pantalla
-                            Expanded(
-                              child: AnimatedSwitcher(
-                                duration: Duration(milliseconds: 300),
-                                transitionBuilder: (Widget child, Animation<double> animation) {
-                                  return SlideTransition(
-                                    position: Tween<Offset>(
-                                      begin: Offset(0.1, 0.0),
-                                      end: Offset.zero,
-                                    ).animate(animation),
-                                    child: FadeTransition(
-                                      opacity: animation,
-                                      child: child,
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  key: ValueKey(_selectedIndex),
-                                  child: _screens[_selectedIndex],
+                              // Contenido de la pantalla
+                              Expanded(
+                                child: AnimatedSwitcher(
+                                  duration: Duration(milliseconds: 300),
+                                  transitionBuilder: (Widget child, Animation<double> animation) {
+                                    return SlideTransition(
+                                      position: Tween<Offset>(
+                                        begin: Offset(0.1, 0.0),
+                                        end: Offset.zero,
+                                      ).animate(animation),
+                                      child: FadeTransition(
+                                        opacity: animation,
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    key: ValueKey(_selectedIndex),
+                                    child: _screens[_selectedIndex],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -264,6 +269,53 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           // Herramientas de la barra superior
           Row(
             children: [
+              // Controles de zoom
+              _buildTopBarButton(
+                icon: Icons.remove,
+                tooltip: 'Reducir zoom (${(_zoomLevel * 100).toStringAsFixed(0)}%)',
+                onPressed: _zoomOut,
+              ),
+
+              SizedBox(width: 4),
+
+              GestureDetector(
+                onTap: _resetZoom,
+                child: Tooltip(
+                  message: 'Restablecer zoom (100%)',
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '${(_zoomLevel * 100).toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(width: 4),
+
+              _buildTopBarButton(
+                icon: Icons.add,
+                tooltip: 'Ampliar zoom (${(_zoomLevel * 100).toStringAsFixed(0)}%)',
+                onPressed: _zoomIn,
+              ),
+
+              SizedBox(width: 16),
+              Container(
+                height: 24,
+                width: 1,
+                color: Colors.white.withOpacity(0.3),
+              ),
+              SizedBox(width: 16),
+
               // Botones de acción
               _buildTopBarButton(
                 icon: Icons.refresh,
@@ -687,6 +739,28 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   void _refreshCurrentScreen() {
     // Trigger refresh en la pantalla actual
     setState(() {});
+  }
+
+  void _zoomIn() {
+    setState(() {
+      if (_zoomLevel < 1.5) {
+        _zoomLevel += 0.1;
+      }
+    });
+  }
+
+  void _zoomOut() {
+    setState(() {
+      if (_zoomLevel > 0.7) {
+        _zoomLevel -= 0.1;
+      }
+    });
+  }
+
+  void _resetZoom() {
+    setState(() {
+      _zoomLevel = 1.0;
+    });
   }
 
   void _triggerScreenAction(String action) {
