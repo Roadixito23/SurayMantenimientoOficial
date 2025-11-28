@@ -183,8 +183,10 @@ class _ReporteMaquinaDialogState extends State<ReporteMaquinaDialog> {
       if (printWindowBase != null) {
         // Cast explícito de WindowBase a Window
         final printWindow = printWindowBase as html.Window;
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
+
+        // Escribir el HTML directamente reemplazando todo el documento
+        // Usando outerHtml en lugar de write() que no está disponible en universal_html
+        printWindow.document!.documentElement!.outerHtml = htmlContent;
 
         // Esperar a que cargue y luego imprimir
         Future.delayed(Duration(milliseconds: 500), () {
