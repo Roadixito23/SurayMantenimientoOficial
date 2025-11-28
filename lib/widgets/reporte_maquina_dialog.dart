@@ -1,5 +1,5 @@
 import 'dart:core';
-import 'dart:html' as html;  // ← AGREGADO: Importación necesaria para funcionalidad web
+import 'package:universal_html/html.dart' as html;  // ← Importación universal compatible con Web y Móvil
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -178,10 +178,13 @@ class _ReporteMaquinaDialogState extends State<ReporteMaquinaDialog> {
 
   void _abrirVentanaImpresion(String htmlContent) {
     if (kIsWeb) {
-      final printWindow = html.window.open('', 'PRINT', 'height=600,width=800');
-      if (printWindow != null) {
-        printWindow.document!.write(htmlContent);
-        printWindow.document!.close();
+      // window.open() devuelve WindowBase?, necesitamos castearlo a Window para acceder a document y print()
+      final printWindowBase = html.window.open('', 'PRINT', 'height=600,width=800');
+      if (printWindowBase != null) {
+        // Cast explícito de WindowBase a Window
+        final printWindow = printWindowBase as html.Window;
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
 
         // Esperar a que cargue y luego imprimir
         Future.delayed(Duration(milliseconds: 500), () {

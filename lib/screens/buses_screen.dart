@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:html' as html;
+import 'package:universal_html/html.dart' as html;
 import 'package:intl/intl.dart';
 
 import '../models/bus.dart';
