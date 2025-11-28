@@ -178,19 +178,22 @@ class _ReporteMaquinaDialogState extends State<ReporteMaquinaDialog> {
 
   void _abrirVentanaImpresion(String htmlContent) {
     if (kIsWeb) {
-      // window.open() devuelve WindowBase?, necesitamos castearlo a Window para acceder a document y print()
-      final printWindowBase = html.window.open('', 'PRINT', 'height=600,width=800');
+      // Crear un blob con el contenido HTML
+      final blob = html.Blob([htmlContent], 'text/html');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      // Abrir la ventana con el HTML como blob URL
+      final printWindowBase = html.window.open(url, 'PRINT', 'height=600,width=800');
+
       if (printWindowBase != null) {
-        // Cast explícito de WindowBase a Window
+        // Cast explícito de WindowBase a Window para acceder a print()
         final printWindow = printWindowBase as html.Window;
 
-        // Escribir el HTML directamente reemplazando todo el documento
-        // Usando outerHtml en lugar de write() que no está disponible en universal_html
-        printWindow.document!.documentElement!.outerHtml = htmlContent;
-
-        // Esperar a que cargue y luego imprimir
-        Future.delayed(Duration(milliseconds: 500), () {
+        // Esperar a que cargue el documento y luego imprimir
+        Future.delayed(Duration(milliseconds: 1000), () {
           printWindow.print();
+          // Revocar el URL del blob después de imprimir
+          html.Url.revokeObjectUrl(url);
         });
       }
     }
