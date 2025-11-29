@@ -143,27 +143,17 @@ class _ReporteMaquinaDialogState extends State<ReporteMaquinaDialog> {
     // Generar HTML del reporte
     final htmlContent = _generarHTMLReporte(bus, periodoTexto, fechaInicio, fechaActual);
 
-    // Crear y descargar el PDF (usando impresión del navegador)
-    final blob = html.Blob([htmlContent], 'text/html');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement(href: url)
-      ..target = 'blank'
-      ..download = 'reporte_${bus.patente}_${_tipoReporte.toLowerCase()}_${DateFormat('yyyyMMdd').format(fechaActual)}.html';
-
-    anchor.click();
-    html.Url.revokeObjectUrl(url);
-
-    // Abrir ventana de impresión
+    // Enviar directamente a cola de impresión
     _abrirVentanaImpresion(htmlContent);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.white),
+            Icon(Icons.print, color: Colors.white),
             SizedBox(width: 12),
             Expanded(
-              child: Text('Reporte generado. Se abrirá la ventana de impresión.'),
+              child: Text('Enviando a cola de impresión. Puedes guardar como PDF desde el diálogo de impresión.'),
             ),
           ],
         ),
@@ -172,6 +162,7 @@ class _ReporteMaquinaDialogState extends State<ReporteMaquinaDialog> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
+        duration: Duration(seconds: 4),
       ),
     );
   }
