@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:bcrypt/bcrypt.dart';
 import '../models/usuario.dart';
 
 class AuthService {
@@ -11,6 +12,21 @@ class AuthService {
   // Obtener usuario actual
   static Usuario? get usuarioActual => _usuarioActual;
 
+  // 🔐 HELPER: Hashear contraseña con bcrypt
+  static String _hashPassword(String password) {
+    return BCrypt.hashpw(password, BCrypt.gensalt());
+  }
+
+  // 🔐 HELPER: Verificar contraseña con bcrypt
+  static bool _verifyPassword(String password, String hashedPassword) {
+    try {
+      return BCrypt.checkpw(password, hashedPassword);
+    } catch (e) {
+      print('❌ Error al verificar contraseña: $e');
+      return false;
+    }
+  }
+
   // Inicializar usuarios de ejemplo si no existen
   static Future<void> initializeDefaultUsers() async {
     try {
@@ -22,10 +38,13 @@ class AuthService {
       if (querySnapshot.docs.isEmpty) {
         print('📝 Creando usuarios predeterminados...');
 
+        // Hashear la contraseña por defecto
+        final hashedPassword = _hashPassword('12345678');
+
         // Crear usuario genérico
         await _firestore.collection(_collectionName).add({
           'nombreUsuario': 'Usuario',
-          'contrasena': '12345678',
+          'contrasena': hashedPassword,
           'fechaCreacion': Timestamp.now(),
           'ultimaActualizacion': null,
         });
@@ -33,12 +52,12 @@ class AuthService {
         // Crear usuario Dante
         await _firestore.collection(_collectionName).add({
           'nombreUsuario': 'Dante',
-          'contrasena': '12345678',
+          'contrasena': hashedPassword,
           'fechaCreacion': Timestamp.now(),
           'ultimaActualizacion': null,
         });
 
-        print('✅ Usuarios predeterminados creados exitosamente');
+        print('✅ Usuarios predeterminados creados exitosamente con contraseñas encriptadas');
       } else {
         print('✅ Usuarios ya existen en la base de datos');
       }
@@ -52,23 +71,28 @@ class AuthService {
     try {
       print('🔐 Intentando login para: $nombreUsuario');
 
-      // Buscar usuario por nombre
+      // Buscar usuario por nombre únicamente
       final querySnapshot = await _firestore
           .collection(_collectionName)
           .where('nombreUsuario', isEqualTo: nombreUsuario)
-          .where('contrasena', isEqualTo: contrasena)
           .limit(1)
           .get();
 
       if (querySnapshot.docs.isEmpty) {
-        print('❌ Usuario o contraseña incorrectos');
+        print('❌ Usuario no encontrado');
         return null;
       }
 
       // Convertir documento a Usuario
       final usuario = Usuario.fromFirestore(querySnapshot.docs.first);
-      _usuarioActual = usuario;
 
+      // Verificar contraseña con bcrypt
+      if (!_verifyPassword(contrasena, usuario.contrasena)) {
+        print('❌ Contraseña incorrecta');
+        return null;
+      }
+
+      _usuarioActual = usuario;
       print('✅ Login exitoso para: ${usuario.nombreUsuario}');
       return usuario;
     } catch (e) {
@@ -115,24 +139,28 @@ class AuthService {
     try {
       print('🔐 Cambiando contraseña...');
 
-      // Verificar contraseña actual
-      if (_usuarioActual!.contrasena != contrasenaActual) {
+      // Verificar contraseña actual con bcrypt
+      if (!_verifyPassword(contrasenaActual, _usuarioActual!.contrasena)) {
         print('❌ Contraseña actual incorrecta');
         return false;
       }
 
-      // Actualizar contraseña
+      // Hashear la nueva contraseña
+      final hashedNewPassword = _hashPassword(nuevaContrasena);
+
+      // Actualizar contraseña en Firestore
       await _firestore.collection(_collectionName).doc(_usuarioActual!.id).update({
-        'contrasena': nuevaContrasena,
+        'contrasena': hashedNewPassword,
         'ultimaActualizacion': Timestamp.now(),
       });
 
+      // Actualizar usuario en memoria
       _usuarioActual = _usuarioActual!.copyWith(
-        contrasena: nuevaContrasena,
+        contrasena: hashedNewPassword,
         ultimaActualizacion: DateTime.now(),
       );
 
-      print('✅ Contraseña actualizada exitosamente');
+      print('✅ Contraseña actualizada exitosamente y encriptada');
       return true;
     } catch (e) {
       print('❌ Error al cambiar contraseña: $e');
@@ -194,15 +222,18 @@ class AuthService {
         };
       }
 
-      // Crear el nuevo usuario
+      // Hashear la contraseña antes de guardarla
+      final hashedPassword = _hashPassword(contrasena);
+
+      // Crear el nuevo usuario con contraseña encriptada
       final docRef = await _firestore.collection(_collectionName).add({
         'nombreUsuario': nombreUsuario.trim(),
-        'contrasena': contrasena,
+        'contrasena': hashedPassword,
         'fechaCreacion': Timestamp.now(),
         'ultimaActualizacion': null,
       });
 
-      print('✅ Usuario creado exitosamente con ID: ${docRef.id}');
+      print('✅ Usuario creado exitosamente con ID: ${docRef.id} y contraseña encriptada');
       return {
         'success': true,
         'message': 'Usuario creado exitosamente',
@@ -269,6 +300,77 @@ class AuthService {
     } catch (e) {
       print('❌ Error al verificar disponibilidad: $e');
       return false;
+    }
+  }
+
+  // 🔄 MIGRACIÓN: Convertir contraseñas en texto plano a hashes bcrypt
+  // Este método debe ejecutarse SOLO UNA VEZ después de implementar bcrypt
+  static Future<Map<String, dynamic>> migrarContrasenasAHash() async {
+    try {
+      print('🔄 Iniciando migración de contraseñas...');
+
+      // Obtener todos los usuarios
+      final querySnapshot = await _firestore.collection(_collectionName).get();
+
+      if (querySnapshot.docs.isEmpty) {
+        return {
+          'success': false,
+          'message': 'No hay usuarios para migrar',
+        };
+      }
+
+      int migrados = 0;
+      int omitidos = 0;
+
+      for (var doc in querySnapshot.docs) {
+        final data = doc.data();
+        final contrasenaActual = data['contrasena'] as String?;
+
+        if (contrasenaActual == null) {
+          print('⚠️ Usuario ${doc.id} no tiene contraseña');
+          omitidos++;
+          continue;
+        }
+
+        // Verificar si ya está hasheada (los hashes bcrypt comienzan con "$2")
+        if (contrasenaActual.startsWith(r'$2')) {
+          print('✓ Usuario ${data['nombreUsuario']} ya tiene contraseña hasheada');
+          omitidos++;
+          continue;
+        }
+
+        // La contraseña está en texto plano, hashearla
+        try {
+          final hashedPassword = _hashPassword(contrasenaActual);
+
+          await _firestore.collection(_collectionName).doc(doc.id).update({
+            'contrasena': hashedPassword,
+            'ultimaActualizacion': Timestamp.now(),
+          });
+
+          print('✅ Migrado: ${data['nombreUsuario']}');
+          migrados++;
+        } catch (e) {
+          print('❌ Error al migrar usuario ${data['nombreUsuario']}: $e');
+          omitidos++;
+        }
+      }
+
+      final mensaje = '✅ Migración completada: $migrados migrados, $omitidos omitidos';
+      print(mensaje);
+
+      return {
+        'success': true,
+        'message': mensaje,
+        'migrados': migrados,
+        'omitidos': omitidos,
+      };
+    } catch (e) {
+      print('❌ Error en migración: $e');
+      return {
+        'success': false,
+        'message': 'Error en migración: $e',
+      };
     }
   }
 }
