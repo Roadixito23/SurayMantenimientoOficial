@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:universal_html/html.dart' as html;
+import 'package:intl/intl.dart';
 import '../models/bus.dart';
 import '../models/reporte_diario.dart';
 import '../models/mantenimiento_preventivo.dart';
@@ -735,12 +738,422 @@ class _HistorialCompletoDialogState extends State<HistorialCompletoDialog> {
     });
   }
 
-  void _exportarHistorial() {
+  Future<void> _exportarHistorial() async {
+    // Obtener todos los registros y estadísticas
+    final registros = await _getRegistrosCompletos();
+    final estadisticas = await _getEstadisticasCompletas();
+
+    // Generar HTML del historial
+    final htmlContent = _generarHTMLHistorial(registros, estadisticas);
+
+    // Enviar directamente a cola de impresión
+    _abrirVentanaImpresion(htmlContent);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Funcionalidad de exportar en desarrollo'),
-        backgroundColor: Colors.blue,
+        content: Row(
+          children: [
+            Icon(Icons.print, color: Colors.white),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text('Enviando a cola de impresión. Puedes guardar como PDF desde el diálogo de impresión.'),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        duration: Duration(seconds: 4),
       ),
     );
+  }
+
+  void _abrirVentanaImpresion(String htmlContent) {
+    if (kIsWeb) {
+      // Crear un blob con el contenido HTML
+      final blob = html.Blob([htmlContent], 'text/html');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      // Abrir la ventana con el HTML como blob URL
+      final printWindowBase = html.window.open(url, 'PRINT', 'height=600,width=800');
+
+      if (printWindowBase != null) {
+        // Cast explícito de WindowBase a Window para acceder a print()
+        final printWindow = printWindowBase as html.Window;
+
+        // Esperar a que cargue el documento y luego imprimir
+        Future.delayed(Duration(milliseconds: 1000), () {
+          printWindow.print();
+          // Revocar el URL del blob después de imprimir
+          html.Url.revokeObjectUrl(url);
+        });
+      }
+    }
+  }
+
+  String _generarHTMLHistorial(List<Map<String, dynamic>> registros, Map<String, int> estadisticas) {
+    final fechaActual = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
+    final bus = widget.bus;
+
+    // Generar filas de la tabla de registros
+    String filasHTML = '';
+    for (final registro in registros) {
+      final tipo = registro['tipo'];
+      final fecha = DateFormat('dd/MM/yyyy').format(registro['fecha'] as DateTime);
+      final descripcion = registro['descripcion'] ?? '';
+      final tipoTrabajo = registro['tipoTrabajo'] ?? 'Sin Categorizar';
+      final observaciones = registro['observaciones'] ?? 'Sin observaciones';
+
+      String tipoLabel;
+      String tipoColor;
+
+      if (tipo == 'mantenimiento') {
+        final TipoMantenimiento tipoMant = registro['tipoMantenimiento'] ?? TipoMantenimiento.preventivo;
+        tipoLabel = _getLabelTipoMantenimiento(tipoMant);
+        tipoColor = _getColorHTMLTipoMantenimiento(tipoMant);
+      } else {
+        tipoLabel = 'Reporte';
+        final ReporteDiario reporteData = registro['data'] as ReporteDiario;
+        tipoColor = _getColorHTMLFromColor(reporteData.colorTipoTrabajo);
+      }
+
+      String detallesAdicionales = '';
+      if (registro['kilometraje'] != null) {
+        detallesAdicionales += '${registro['kilometraje'].round()} km';
+      }
+      if (registro['tecnico'] != null) {
+        if (detallesAdicionales.isNotEmpty) detallesAdicionales += ' | ';
+        detallesAdicionales += 'Técnico: ${registro['tecnico']}';
+      }
+      if (registro['autor'] != null) {
+        if (detallesAdicionales.isNotEmpty) detallesAdicionales += ' | ';
+        detallesAdicionales += 'Autor: ${registro['autor']}';
+      }
+
+      filasHTML += '''
+        <tr>
+          <td>$fecha</td>
+          <td>
+            <span class="badge" style="background-color: $tipoColor;">$tipoLabel</span>
+          </td>
+          <td>$descripcion</td>
+          <td>$tipoTrabajo</td>
+          <td style="font-size: 11px;">$detallesAdicionales</td>
+          <td style="font-size: 11px; max-width: 200px;">$observaciones</td>
+        </tr>
+      ''';
+    }
+
+    return '''
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Historial Completo - ${bus.identificadorDisplay}</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          color: #2C3E50;
+          padding: 20px;
+          background: white;
+        }
+
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          background: white;
+        }
+
+        .header {
+          text-align: center;
+          padding: 20px 0;
+          border-bottom: 3px solid #1565C0;
+          margin-bottom: 30px;
+        }
+
+        .header h1 {
+          color: #1565C0;
+          font-size: 28px;
+          margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+          color: #555;
+          font-size: 14px;
+          margin: 5px 0;
+        }
+
+        .bus-info {
+          background: #E3F2FD;
+          padding: 15px;
+          border-radius: 8px;
+          margin-bottom: 25px;
+          border-left: 4px solid #1565C0;
+        }
+
+        .bus-info h2 {
+          color: #1565C0;
+          font-size: 18px;
+          margin-bottom: 10px;
+        }
+
+        .bus-info-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 15px;
+        }
+
+        .bus-info-item {
+          padding: 8px;
+          background: white;
+          border-radius: 5px;
+        }
+
+        .info-label {
+          font-size: 11px;
+          color: #666;
+          margin-bottom: 3px;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        .info-value {
+          font-size: 14px;
+          color: #2C3E50;
+          font-weight: bold;
+        }
+
+        .estadisticas {
+          margin-bottom: 25px;
+          padding: 15px;
+          background: #f8f9fa;
+          border-radius: 8px;
+        }
+
+        .estadisticas h2 {
+          color: #1565C0;
+          font-size: 18px;
+          margin-bottom: 15px;
+          border-bottom: 2px solid #1565C0;
+          padding-bottom: 8px;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 10px;
+          text-align: center;
+        }
+
+        .stat-item {
+          padding: 12px;
+          background: white;
+          border-radius: 5px;
+          border: 2px solid #e0e0e0;
+        }
+
+        .stat-value {
+          font-size: 24px;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+
+        .stat-label {
+          font-size: 11px;
+          color: #666;
+          text-transform: uppercase;
+        }
+
+        .registros-section {
+          margin-bottom: 25px;
+        }
+
+        .registros-section h2 {
+          color: #1565C0;
+          font-size: 18px;
+          margin-bottom: 15px;
+          border-bottom: 2px solid #1565C0;
+          padding-bottom: 8px;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 15px 0;
+          background: white;
+          font-size: 12px;
+        }
+
+        th, td {
+          padding: 10px 8px;
+          text-align: left;
+          border: 1px solid #ddd;
+        }
+
+        th {
+          background: #1565C0;
+          color: white;
+          font-weight: 600;
+          font-size: 11px;
+          text-transform: uppercase;
+        }
+
+        tr:nth-child(even) {
+          background: #f8f9fa;
+        }
+
+        .badge {
+          display: inline-block;
+          padding: 3px 8px;
+          border-radius: 4px;
+          color: white;
+          font-size: 10px;
+          font-weight: bold;
+          text-transform: uppercase;
+        }
+
+        .footer {
+          margin-top: 40px;
+          padding-top: 20px;
+          border-top: 2px solid #1565C0;
+          text-align: center;
+          font-size: 11px;
+          color: #666;
+        }
+
+        @media print {
+          body {
+            padding: 10px;
+          }
+
+          .container {
+            max-width: 100%;
+          }
+
+          table {
+            font-size: 10px;
+          }
+
+          th, td {
+            padding: 6px 4px;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>📋 HISTORIAL COMPLETO</h1>
+          <div class="subtitle">Buses Suray - Sistema de Gestión de Flota</div>
+          <div class="subtitle">Generado: $fechaActual</div>
+        </div>
+
+        <!-- Información del Bus -->
+        <div class="bus-info">
+          <h2>🚌 Información del Bus</h2>
+          <div class="bus-info-grid">
+            <div class="bus-info-item">
+              <div class="info-label">Patente</div>
+              <div class="info-value">${bus.patente}</div>
+            </div>
+            <div class="bus-info-item">
+              <div class="info-label">Identificador</div>
+              <div class="info-value">${bus.identificadorDisplay}</div>
+            </div>
+            <div class="bus-info-item">
+              <div class="info-label">Marca/Modelo</div>
+              <div class="info-value">${bus.marca} ${bus.modelo}</div>
+            </div>
+            <div class="bus-info-item">
+              <div class="info-label">Año</div>
+              <div class="info-value">${bus.anio}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="estadisticas">
+          <h2>📊 Estadísticas del Historial</h2>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value" style="color: #2196F3;">${estadisticas['total']}</div>
+              <div class="stat-label">Total Registros</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" style="color: #E53E3E;">${estadisticas['correctivos']}</div>
+              <div class="stat-label">Correctivos</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" style="color: #3182CE;">${estadisticas['rutinarios']}</div>
+              <div class="stat-label">Rutinarios</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" style="color: #38A169;">${estadisticas['preventivos']}</div>
+              <div class="stat-label">Preventivos</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" style="color: #9C27B0;">${estadisticas['reportes']}</div>
+              <div class="stat-label">Reportes</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" style="color: #009688;">${estadisticas['completados']}</div>
+              <div class="stat-label">Completados</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla de Registros -->
+        <div class="registros-section">
+          <h2>📑 Detalle de Registros</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Descripción</th>
+                <th>Categoría</th>
+                <th>Detalles</th>
+                <th>Observaciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              $filasHTML
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer">
+          <p><strong>Sistema de Gestión de Buses Suray</strong></p>
+          <p>Reporte generado automáticamente - ${bus.identificadorDisplay}</p>
+          <p>Fecha de generación: $fechaActual</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    ''';
+  }
+
+  String _getColorHTMLTipoMantenimiento(TipoMantenimiento tipo) {
+    switch (tipo) {
+      case TipoMantenimiento.correctivo:
+        return '#E53E3E';
+      case TipoMantenimiento.rutinario:
+        return '#3182CE';
+      case TipoMantenimiento.preventivo:
+        return '#38A169';
+    }
+  }
+
+  String _getColorHTMLFromColor(Color color) {
+    return '#${color.value.toRadixString(16).substring(2, 8)}';
   }
 }
