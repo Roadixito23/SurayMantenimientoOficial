@@ -241,6 +241,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _migrarContrasenas() async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.security, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Migrar Contraseñas'),
+          ],
+        ),
+        content: Text(
+          '¿Deseas migrar todas las contraseñas a formato encriptado?\n\n'
+          'Esta operación convertirá todas las contraseñas en texto plano a hashes seguros usando bcrypt.\n\n'
+          'Solo necesitas hacer esto UNA VEZ.',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+            ),
+            child: Text('Migrar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado == true) {
+      // Mostrar diálogo de carga
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text('Migrando contraseñas...'),
+            ],
+          ),
+        ),
+      );
+
+      final resultado = await AuthService.migrarContrasenasAHash();
+
+      // Cerrar diálogo de carga
+      Navigator.pop(context);
+
+      if (resultado['success']) {
+        _mostrarExito(resultado['message']);
+      } else {
+        _mostrarError(resultado['message']);
+      }
+    }
+  }
+
   void _cerrarSesion() {
     showDialog(
       context: context,
@@ -835,6 +897,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: SurayColors.azulMarinoProfundo,
                   side: BorderSide(color: SurayColors.azulMarinoProfundo, width: 2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+
+            SizedBox(height: 12),
+
+            // Botón para migrar contraseñas
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: _migrarContrasenas,
+                icon: Icon(Icons.security),
+                label: Text('Migrar Contraseñas a Bcrypt'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade700,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
