@@ -409,126 +409,313 @@ class _ReportesDiariosScreenState extends State<ReportesDiariosScreen> {
 
   Widget _buildReporteCard(ReporteDiario reporte) {
     return Card(
-      elevation: 2,
-      margin: EdgeInsets.only(bottom: 12),
-      child: ExpansionTile(
-        leading: Container(
-          padding: EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: reporte.colorTipoTrabajo,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            reporte.iconoTipoTrabajo,
-            color: Colors.white,
-            size: 24,
+      elevation: 4,
+      margin: EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: reporte.colorTipoTrabajo.withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              reporte.colorTipoTrabajo.withOpacity(0.03),
+            ],
           ),
         ),
-        title: Row(
-          children: [
-            Text(
-              'Reporte ${reporte.numeroReporte}',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            SizedBox(width: 12),
-            Chip(
-              label: Text(
-                reporte.tipoTrabajoDisplay,
-                style: TextStyle(fontSize: 11, color: Colors.white),
+        child: ExpansionTile(
+          tilePadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          childrenPadding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+          leading: Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  reporte.colorTipoTrabajo,
+                  reporte.colorTipoTrabajo.withOpacity(0.7),
+                ],
               ),
-              backgroundColor: reporte.colorTipoTrabajo,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: reporte.colorTipoTrabajo.withOpacity(0.4),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 8.0),
-          child: Column(
+            child: Icon(
+              reporte.iconoTipoTrabajo,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
-                  SizedBox(width: 4),
                   Text(
-                    ChileanUtils.formatDate(reporte.fecha),
-                    style: TextStyle(fontSize: 13),
+                    'Reporte ${reporte.numeroReporte}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: SurayColors.azulMarinoProfundo,
+                    ),
                   ),
-                  SizedBox(width: 16),
-                  Icon(Icons.person, size: 14, color: Colors.grey[600]),
-                  SizedBox(width: 4),
-                  Text(
-                    reporte.autor,
-                    style: TextStyle(fontSize: 13),
+                  SizedBox(width: 12),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          reporte.colorTipoTrabajo,
+                          reporte.colorTipoTrabajo.withOpacity(0.8),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: reporte.colorTipoTrabajo.withOpacity(0.3),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      reporte.tipoTrabajoDisplay,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              SizedBox(height: 4),
+              SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(Icons.directions_bus, size: 14, color: Colors.grey[600]),
-                  SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      'Buses: ${reporte.busesAtendidos.join(", ")}',
-                      style: TextStyle(fontSize: 13),
-                      overflow: TextOverflow.ellipsis,
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: SurayColors.grisAntracita.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.calendar_today, size: 14, color: SurayColors.grisAntracita),
+                        SizedBox(width: 6),
+                        Text(
+                          ChileanUtils.formatDate(reporte.fecha),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: SurayColors.grisAntracita,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: SurayColors.azulMarinoProfundo.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.person, size: 14, color: SurayColors.azulMarinoProfundo),
+                        SizedBox(width: 6),
+                        Text(
+                          reporte.autor,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: SurayColors.azulMarinoProfundo,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ],
           ),
-        ),
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(24, 0, 24, 16),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Divider(height: 1),
-                SizedBox(height: 16),
-                Text(
-                  'Descripción del Trabajo:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  child: Text(
-                    reporte.observaciones,
-                    style: TextStyle(fontSize: 14, height: 1.5),
-                  ),
-                ),
-                SizedBox(height: 16),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton.icon(
-                      onPressed: () => _editarReporte(reporte),
-                      icon: Icon(Icons.edit, size: 18),
-                      label: Text('Editar'),
-                      style: TextButton.styleFrom(foregroundColor: Colors.blue[700]),
+                    Icon(
+                      Icons.directions_bus,
+                      size: 16,
+                      color: SurayColors.naranjaQuemado,
                     ),
-                    SizedBox(width: 8),
-                    TextButton.icon(
-                      onPressed: () => _eliminarReporte(reporte),
-                      icon: Icon(Icons.delete, size: 18),
-                      label: Text('Eliminar'),
-                      style: TextButton.styleFrom(foregroundColor: Colors.red[700]),
+                    SizedBox(width: 6),
+                    Text(
+                      'Máquinas atendidas:',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: SurayColors.grisAntracita,
+                      ),
                     ),
                   ],
+                ),
+                SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: reporte.busesAtendidos.map((bus) {
+                    return Container(
+                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            SurayColors.naranjaQuemado,
+                            SurayColors.naranjaQuemadoClaro,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: SurayColors.naranjaQuemado.withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.directions_bus,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            bus,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 ),
               ],
             ),
           ),
-        ],
+          children: [
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: SurayColors.blancoHumo,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: reporte.colorTipoTrabajo.withOpacity(0.3),
+                  width: 2,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: reporte.colorTipoTrabajo.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.description,
+                          size: 18,
+                          color: reporte.colorTipoTrabajo,
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Descripción del Trabajo',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: SurayColors.azulMarinoProfundo,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    reporte.observaciones,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color: SurayColors.grisAntracita,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _editarReporte(reporte),
+                  icon: Icon(Icons.edit, size: 18),
+                  label: Text('Editar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: SurayColors.azulMarinoProfundo,
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () => _eliminarReporte(reporte),
+                  icon: Icon(Icons.delete, size: 18),
+                  label: Text('Eliminar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red[600],
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

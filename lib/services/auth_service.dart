@@ -86,15 +86,47 @@ class AuthService {
       // Convertir documento a Usuario
       final usuario = Usuario.fromFirestore(querySnapshot.docs.first);
 
-      // Verificar contraseña con bcrypt
-      if (!_verifyPassword(contrasena, usuario.contrasena)) {
+      // 🔄 Migración automática: Detectar si la contraseña está en texto plano
+      bool passwordMatch = false;
+      bool needsMigration = false;
+
+      if (usuario.contrasena.startsWith(r'$2')) {
+        // Contraseña ya hasheada, verificar con bcrypt
+        passwordMatch = _verifyPassword(contrasena, usuario.contrasena);
+      } else {
+        // Contraseña en texto plano, comparar directamente
+        passwordMatch = (contrasena == usuario.contrasena);
+        needsMigration = passwordMatch; // Si coincide, migrar
+      }
+
+      if (!passwordMatch) {
         print('❌ Contraseña incorrecta');
         return null;
       }
 
-      _usuarioActual = usuario;
+      // 🔄 Si necesita migración, hashear automáticamente
+      if (needsMigration) {
+        print('🔄 Migrando contraseña a hash...');
+        final hashedPassword = _hashPassword(contrasena);
+
+        await _firestore.collection(_collectionName).doc(usuario.id).update({
+          'contrasena': hashedPassword,
+          'ultimaActualizacion': Timestamp.now(),
+        });
+
+        // Actualizar el objeto usuario en memoria
+        _usuarioActual = usuario.copyWith(
+          contrasena: hashedPassword,
+          ultimaActualizacion: DateTime.now(),
+        );
+
+        print('✅ Contraseña migrada automáticamente a hash');
+      } else {
+        _usuarioActual = usuario;
+      }
+
       print('✅ Login exitoso para: ${usuario.nombreUsuario}');
-      return usuario;
+      return _usuarioActual;
     } catch (e) {
       print('❌ Error en login: $e');
       return null;
@@ -139,8 +171,21 @@ class AuthService {
     try {
       print('🔐 Cambiando contraseña...');
 
-      // Verificar contraseña actual con bcrypt
-      if (!_verifyPassword(contrasenaActual, _usuarioActual!.contrasena)) {
+      // 🔄 Verificar contraseña actual (con migración automática si es necesario)
+      bool passwordMatch = false;
+
+      if (_usuarioActual!.contrasena.startsWith(r'$2')) {
+        // Contraseña ya hasheada, verificar con bcrypt
+        passwordMatch = _verifyPassword(contrasenaActual, _usuarioActual!.contrasena);
+      } else {
+        // Contraseña en texto plano, comparar directamente
+        passwordMatch = (contrasenaActual == _usuarioActual!.contrasena);
+        if (passwordMatch) {
+          print('🔄 Detectada contraseña en texto plano, se migrará automáticamente');
+        }
+      }
+
+      if (!passwordMatch) {
         print('❌ Contraseña actual incorrecta');
         return false;
       }
@@ -300,77 +345,6 @@ class AuthService {
     } catch (e) {
       print('❌ Error al verificar disponibilidad: $e');
       return false;
-    }
-  }
-
-  // 🔄 MIGRACIÓN: Convertir contraseñas en texto plano a hashes bcrypt
-  // Este método debe ejecutarse SOLO UNA VEZ después de implementar bcrypt
-  static Future<Map<String, dynamic>> migrarContrasenasAHash() async {
-    try {
-      print('🔄 Iniciando migración de contraseñas...');
-
-      // Obtener todos los usuarios
-      final querySnapshot = await _firestore.collection(_collectionName).get();
-
-      if (querySnapshot.docs.isEmpty) {
-        return {
-          'success': false,
-          'message': 'No hay usuarios para migrar',
-        };
-      }
-
-      int migrados = 0;
-      int omitidos = 0;
-
-      for (var doc in querySnapshot.docs) {
-        final data = doc.data();
-        final contrasenaActual = data['contrasena'] as String?;
-
-        if (contrasenaActual == null) {
-          print('⚠️ Usuario ${doc.id} no tiene contraseña');
-          omitidos++;
-          continue;
-        }
-
-        // Verificar si ya está hasheada (los hashes bcrypt comienzan con "$2")
-        if (contrasenaActual.startsWith(r'$2')) {
-          print('✓ Usuario ${data['nombreUsuario']} ya tiene contraseña hasheada');
-          omitidos++;
-          continue;
-        }
-
-        // La contraseña está en texto plano, hashearla
-        try {
-          final hashedPassword = _hashPassword(contrasenaActual);
-
-          await _firestore.collection(_collectionName).doc(doc.id).update({
-            'contrasena': hashedPassword,
-            'ultimaActualizacion': Timestamp.now(),
-          });
-
-          print('✅ Migrado: ${data['nombreUsuario']}');
-          migrados++;
-        } catch (e) {
-          print('❌ Error al migrar usuario ${data['nombreUsuario']}: $e');
-          omitidos++;
-        }
-      }
-
-      final mensaje = '✅ Migración completada: $migrados migrados, $omitidos omitidos';
-      print(mensaje);
-
-      return {
-        'success': true,
-        'message': mensaje,
-        'migrados': migrados,
-        'omitidos': omitidos,
-      };
-    } catch (e) {
-      print('❌ Error en migración: $e');
-      return {
-        'success': false,
-        'message': 'Error en migración: $e',
-      };
     }
   }
 }

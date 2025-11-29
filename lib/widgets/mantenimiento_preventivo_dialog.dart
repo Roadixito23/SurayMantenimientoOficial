@@ -22,7 +22,6 @@ class MantenimientoPreventivoDialog extends StatefulWidget {
 
 class _MantenimientoPreventivoDialogState extends State<MantenimientoPreventivoDialog> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _kilometrajeController;
   late TextEditingController _tecnicoController;
   late TextEditingController _observacionesController;
   late TextEditingController _marcaRepuestoController;
@@ -41,9 +40,6 @@ class _MantenimientoPreventivoDialogState extends State<MantenimientoPreventivoD
   @override
   void initState() {
     super.initState();
-    _kilometrajeController = TextEditingController(
-      text: widget.bus.kilometraje?.toString() ?? '',
-    );
     _tecnicoController = TextEditingController();
     _observacionesController = TextEditingController();
     _marcaRepuestoController = TextEditingController();
@@ -56,7 +52,6 @@ class _MantenimientoPreventivoDialogState extends State<MantenimientoPreventivoD
 
   @override
   void dispose() {
-    _kilometrajeController.dispose();
     _tecnicoController.dispose();
     _observacionesController.dispose();
     _marcaRepuestoController.dispose();
@@ -146,32 +141,6 @@ class _MantenimientoPreventivoDialogState extends State<MantenimientoPreventivoD
                       style: TextStyle(fontSize: 16),
                     ),
                   ),
-                ),
-
-                SizedBox(height: 16),
-
-                // Kilometraje de referencia
-                TextFormField(
-                  controller: _kilometrajeController,
-                  decoration: InputDecoration(
-                    labelText: 'Kilometraje de referencia para el mantenimiento',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.speed),
-                    suffixText: 'km',
-                    helperText: 'Solo para referencia del mantenimiento - No modifica el bus',
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'El kilometraje de referencia es requerido';
-                    }
-                    final km = double.tryParse(value);
-                    if (km == null || km < 0) {
-                      return 'Kilometraje inválido';
-                    }
-                    return null;
-                  },
                 ),
 
                 SizedBox(height: 16),
@@ -429,7 +398,8 @@ class _MantenimientoPreventivoDialogState extends State<MantenimientoPreventivoD
     });
 
     try {
-      final kilometrajeReferencia = double.parse(_kilometrajeController.text);
+      // Usar el kilometraje actual del bus
+      final kilometrajeReferencia = widget.bus.kilometraje ?? 0.0;
 
       // Configurar mantenimiento preventivo básico si es necesario
       if (widget.bus.mantenimientoPreventivo == null) {
