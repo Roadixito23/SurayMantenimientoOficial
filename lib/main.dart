@@ -33,6 +33,9 @@ void main() async {
     );
     print('✅ Firebase inicializado correctamente para ${DefaultFirebaseOptions.currentPlatform.projectId}');
 
+    // Dar un pequeño delay para asegurar que Firebase esté completamente inicializado
+    await Future.delayed(Duration(milliseconds: 500));
+
     // Inicializar datos de ejemplo si no existen
     print('📊 Verificando datos de ejemplo...');
     await FirebaseService.initializeSampleData();
@@ -45,7 +48,7 @@ void main() async {
 
     print('🎉 Aplicación lista para usar');
   } catch (e) {
-    print('❌ Error crítico al inicializar la aplicación: $e');
+    print('❌ Error al inicializar la aplicación: $e');
 
     // En caso de error, mostrar información útil
     if (e.toString().contains('API key not valid')) {
@@ -54,6 +57,8 @@ void main() async {
       print('📁 Error de proyecto: Verifica la configuración en Firebase Console');
     } else if (e.toString().contains('network')) {
       print('🌐 Error de red: Verifica tu conexión a internet');
+    } else if (e.toString().contains('channel-error')) {
+      print('⚠️ Error de canal: Continuando con inicialización retardada...');
     }
   }
 

@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:bcrypt/bcrypt.dart';
 import '../models/usuario.dart';
+import '../firebase_options.dart';
 
 class AuthService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -70,6 +72,15 @@ class AuthService {
   static Future<Usuario?> login(String nombreUsuario, String contrasena) async {
     try {
       print('🔐 Intentando login para: $nombreUsuario');
+
+      // Verificar que Firebase esté inicializado
+      if (Firebase.apps.isEmpty) {
+        print('❌ Firebase no está inicializado. Reintentando...');
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+        await Future.delayed(Duration(milliseconds: 500));
+      }
 
       // Buscar usuario por nombre únicamente
       final querySnapshot = await _firestore
