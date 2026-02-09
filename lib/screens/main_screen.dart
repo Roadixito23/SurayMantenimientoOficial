@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'home_screen.dart';
 import 'dashboard_screen.dart';
 import 'buses_screen.dart';
 import 'repuestos_screen.dart';
@@ -20,7 +19,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   double _zoomLevel = 1.0; // Nivel de zoom (1.0 = 100%)
 
   final List<Widget> _screens = [
-    HomeScreen(),
     DashboardScreen(),
     BusesScreen(),
     RepuestosScreen(),
@@ -28,7 +26,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   ];
 
   final List<String> _titles = [
-    'Inicio',
     'Panel Principal',
     'Gestión de Flota',
     'Repuestos',
@@ -36,7 +33,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   ];
 
   final List<IconData> _icons = [
-    Icons.home,
     Icons.dashboard,
     Icons.directions_bus,
     Icons.build,
@@ -48,11 +44,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     'Alt+2',
     'Alt+3',
     'Alt+4',
-    'Alt+5',
   ];
 
   final List<String> _descriptions = [
-    'Vista rápida de la flota',
     'Resumen general del sistema',
     'Gestión completa de la flota',
     'Inventario y catálogo de repuestos',
@@ -83,16 +77,21 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       // Drawer para pantallas pequeñas
       drawer: isSmallScreen ? _buildDrawer() : null,
       // BottomNavigationBar para pantallas muy pequeñas (móvil)
-      bottomNavigationBar: size.width < 600 ? _buildBottomNavigationBar() : null,
+      bottomNavigationBar:
+          size.width < 600 ? _buildBottomNavigationBar() : null,
       body: CallbackShortcuts(
         bindings: {
-          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit1): () => _navigateTo(0),
-          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit2): () => _navigateTo(1),
-          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit3): () => _navigateTo(2),
-          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit4): () => _navigateTo(3),
-          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit5): () => _navigateTo(4),
+          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit1):
+              () => _navigateTo(0),
+          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit2):
+              () => _navigateTo(1),
+          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit3):
+              () => _navigateTo(2),
+          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit4):
+              () => _navigateTo(3),
           LogicalKeySet(LogicalKeyboardKey.f5): () => _refreshCurrentScreen(),
-          LogicalKeySet(LogicalKeyboardKey.escape): () => _showShortcutsDialog(),
+          LogicalKeySet(LogicalKeyboardKey.escape): () =>
+              _showShortcutsDialog(),
         },
         child: Focus(
           autofocus: true,
@@ -130,7 +129,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               Expanded(
                                 child: AnimatedSwitcher(
                                   duration: Duration(milliseconds: 300),
-                                  transitionBuilder: (Widget child, Animation<double> animation) {
+                                  transitionBuilder: (Widget child,
+                                      Animation<double> animation) {
                                     return SlideTransition(
                                       position: Tween<Offset>(
                                         begin: Offset(0.1, 0.0),
@@ -201,7 +201,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               child: Container(
                 width: 60,
                 child: Icon(
-                  isSmallScreen ? Icons.menu : (_isRailExtended ? Icons.menu_open : Icons.menu),
+                  isSmallScreen
+                      ? Icons.menu
+                      : (_isRailExtended ? Icons.menu_open : Icons.menu),
                   color: Colors.white,
                 ),
               ),
@@ -225,7 +227,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       ),
                     ],
                   ),
-                  child: Icon(Icons.directions_bus, color: SurayColors.blancoHumo, size: 24),
+                  child: Icon(Icons.directions_bus,
+                      color: SurayColors.blancoHumo, size: 24),
                 ),
                 SizedBox(width: 12),
                 Column(
@@ -272,7 +275,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               // Controles de zoom
               _buildTopBarButton(
                 icon: Icons.remove,
-                tooltip: 'Reducir zoom (${(_zoomLevel * 100).toStringAsFixed(0)}%)',
+                tooltip:
+                    'Reducir zoom (${(_zoomLevel * 100).toStringAsFixed(0)}%)',
                 onPressed: _zoomOut,
               ),
 
@@ -304,7 +308,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
               _buildTopBarButton(
                 icon: Icons.add,
-                tooltip: 'Ampliar zoom (${(_zoomLevel * 100).toStringAsFixed(0)}%)',
+                tooltip:
+                    'Ampliar zoom (${(_zoomLevel * 100).toStringAsFixed(0)}%)',
                 onPressed: _zoomIn,
               ),
 
@@ -408,14 +413,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       padding: EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          Icon(Icons.home, size: 16, color: SurayColors.grisAntracita),
-          SizedBox(width: 8),
-          Text(
-            'Inicio',
-            style: TextStyle(color: SurayColors.grisAntracita, fontSize: 14),
-          ),
-          SizedBox(width: 8),
-          Icon(Icons.chevron_right, size: 16, color: SurayColors.grisAntracitaClaro),
+          Icon(_icons[_selectedIndex],
+              size: 16, color: SurayColors.azulMarinoProfundo),
           SizedBox(width: 8),
           Text(
             _titles[_selectedIndex],
@@ -452,11 +451,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           SizedBox(width: 16),
 
           // Información adicional
-          Icon(Icons.access_time, size: 14, color: SurayColors.grisAntracitaClaro),
+          Icon(Icons.access_time,
+              size: 14, color: SurayColors.grisAntracitaClaro),
           SizedBox(width: 6),
           Text(
             'Última actualización: ${DateTime.now().toLocal().toString().substring(11, 16)}',
-            style: TextStyle(color: SurayColors.grisAntracitaClaro, fontSize: 12),
+            style:
+                TextStyle(color: SurayColors.grisAntracitaClaro, fontSize: 12),
           ),
         ],
       ),
@@ -483,36 +484,47 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Material(
                     borderRadius: BorderRadius.circular(12),
-                    color: isSelected ? SurayColors.azulMarinoProfundo.withOpacity(0.1) : Colors.transparent,
+                    color: isSelected
+                        ? SurayColors.azulMarinoProfundo.withOpacity(0.1)
+                        : Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
                       onTap: () => _navigateTo(index),
                       splashColor: SurayColors.naranjaQuemado.withOpacity(0.2),
-                      highlightColor: SurayColors.naranjaQuemado.withOpacity(0.1),
+                      highlightColor:
+                          SurayColors.naranjaQuemado.withOpacity(0.1),
                       child: Container(
-                        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                        padding:
+                            EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                         child: Row(
                           children: [
                             Container(
                               padding: EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: isSelected ? SurayColors.azulMarinoProfundo : SurayColors.grisAntracita.withOpacity(0.1),
+                                color: isSelected
+                                    ? SurayColors.azulMarinoProfundo
+                                    : SurayColors.grisAntracita
+                                        .withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
-                                boxShadow: isSelected ? [
-                                  BoxShadow(
-                                    color: SurayColors.azulMarinoProfundo.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    spreadRadius: 1,
-                                  ),
-                                ] : null,
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: SurayColors.azulMarinoProfundo
+                                              .withOpacity(0.3),
+                                          blurRadius: 8,
+                                          spreadRadius: 1,
+                                        ),
+                                      ]
+                                    : null,
                               ),
                               child: Icon(
                                 _icons[index],
-                                color: isSelected ? SurayColors.blancoHumo : SurayColors.grisAntracita,
+                                color: isSelected
+                                    ? SurayColors.blancoHumo
+                                    : SurayColors.grisAntracita,
                                 size: 20,
                               ),
                             ),
-
                             if (_isRailExtended) ...[
                               SizedBox(width: 16),
                               Expanded(
@@ -522,8 +534,12 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                     Text(
                                       _titles[index],
                                       style: TextStyle(
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                        color: isSelected ? SurayColors.azulMarinoProfundo : SurayColors.grisAntracita,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.w500,
+                                        color: isSelected
+                                            ? SurayColors.azulMarinoProfundo
+                                            : SurayColors.grisAntracita,
                                         fontSize: 14,
                                       ),
                                     ),
@@ -542,12 +558,20 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               ),
                               SizedBox(width: 8),
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? SurayColors.naranjaQuemado.withOpacity(0.1) : SurayColors.grisAntracita.withOpacity(0.1),
+                                  color: isSelected
+                                      ? SurayColors.naranjaQuemado
+                                          .withOpacity(0.1)
+                                      : SurayColors.grisAntracita
+                                          .withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: isSelected ? SurayColors.naranjaQuemado.withOpacity(0.3) : Colors.transparent,
+                                    color: isSelected
+                                        ? SurayColors.naranjaQuemado
+                                            .withOpacity(0.3)
+                                        : Colors.transparent,
                                     width: 1,
                                   ),
                                 ),
@@ -555,7 +579,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                   _shortcuts[index],
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: isSelected ? SurayColors.naranjaQuemado : SurayColors.grisAntracita,
+                                    color: isSelected
+                                        ? SurayColors.naranjaQuemado
+                                        : SurayColors.grisAntracita,
                                     fontFamily: 'monospace',
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -574,7 +600,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
           // Información del sistema
           if (_isRailExtended) ...[
-            Divider(height: 1, color: SurayColors.grisAntracita.withOpacity(0.2)),
+            Divider(
+                height: 1, color: SurayColors.grisAntracita.withOpacity(0.2)),
             Container(
               padding: EdgeInsets.all(16),
               margin: EdgeInsets.all(8),
@@ -591,7 +618,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.info_outline, size: 14, color: SurayColors.azulMarinoProfundo),
+                      Icon(Icons.info_outline,
+                          size: 14, color: SurayColors.azulMarinoProfundo),
                       SizedBox(width: 6),
                       Text(
                         'Sistema v2.0.23',
@@ -701,27 +729,31 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           SizedBox(width: 6),
           Text(
             'Listo',
-            style: TextStyle(fontSize: 12, color: SurayColors.blancoHumo, fontWeight: FontWeight.w500),
+            style: TextStyle(
+                fontSize: 12,
+                color: SurayColors.blancoHumo,
+                fontWeight: FontWeight.w500),
           ),
-
           SizedBox(width: 16),
-          Container(width: 1, height: 16, color: SurayColors.blancoHumo.withOpacity(0.3)),
+          Container(
+              width: 1,
+              height: 16,
+              color: SurayColors.blancoHumo.withOpacity(0.3)),
           SizedBox(width: 16),
-
           Icon(Icons.cloud_done, size: 14, color: Colors.green),
           SizedBox(width: 6),
           Text(
             'Conectado a Firebase',
             style: TextStyle(fontSize: 12, color: SurayColors.blancoHumo),
           ),
-
           Spacer(),
-
-          Icon(Icons.keyboard, size: 14, color: SurayColors.naranjaQuemadoClaro),
+          Icon(Icons.keyboard,
+              size: 14, color: SurayColors.naranjaQuemadoClaro),
           SizedBox(width: 6),
           Text(
             'Presiona Esc para ver atajos',
-            style: TextStyle(fontSize: 12, color: SurayColors.blancoHumo.withOpacity(0.8)),
+            style: TextStyle(
+                fontSize: 12, color: SurayColors.blancoHumo.withOpacity(0.8)),
           ),
         ],
       ),
@@ -834,7 +866,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         ),
         child: Icon(icon, color: color, size: 20),
       ),
-      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+      title: Text(title,
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
       subtitle: Text(subtitle, style: TextStyle(fontSize: 12)),
       trailing: Text(time, style: TextStyle(fontSize: 11, color: Colors.grey)),
       dense: true,
@@ -857,11 +890,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildShortcutRow('Alt + 1', 'Inicio'),
-              _buildShortcutRow('Alt + 2', 'Panel Principal'),
-              _buildShortcutRow('Alt + 3', 'Gestión de Flota'),
-              _buildShortcutRow('Alt + 4', 'Repuestos'),
-              _buildShortcutRow('Alt + 5', 'Reportes'),
+              _buildShortcutRow('Alt + 1', 'Panel Principal'),
+              _buildShortcutRow('Alt + 2', 'Gestión de Flota'),
+              _buildShortcutRow('Alt + 3', 'Repuestos'),
+              _buildShortcutRow('Alt + 4', 'Reportes'),
               Divider(),
               _buildShortcutRow('F5', 'Actualizar pantalla'),
               _buildShortcutRow('Esc', 'Mostrar esta ayuda'),
@@ -950,7 +982,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       color: SurayColors.naranjaQuemado,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.directions_bus, color: Colors.white, size: 32),
+                    child: Icon(Icons.directions_bus,
+                        color: Colors.white, size: 32),
                   ),
                   SizedBox(height: 12),
                   Text(
@@ -991,8 +1024,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 title: Text(
                   _titles[index],
                   style: TextStyle(
-                    fontWeight:
-                        _selectedIndex == index ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: _selectedIndex == index
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                     color: _selectedIndex == index
                         ? SurayColors.azulMarinoProfundo
                         : SurayColors.grisAntracita,
@@ -1011,7 +1045,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             }),
             Divider(),
             ListTile(
-              leading: Icon(Icons.settings, color: SurayColors.azulMarinoProfundo),
+              leading:
+                  Icon(Icons.settings, color: SurayColors.azulMarinoProfundo),
               title: Text('Configuración'),
               onTap: () {
                 Navigator.pop(context);

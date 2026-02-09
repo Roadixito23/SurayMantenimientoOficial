@@ -53,7 +53,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildAlertasKilometrajeProximo(),
             SizedBox(height: 20),
 
-            // Contenido principal - Una sola columna para revisión técnica
+            // Contenido principal - Dos columnas para revisión técnica
             Expanded(
               child: FutureBuilder<List<List<Bus>>>(
                 future: Future.wait([
@@ -62,11 +62,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ]),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Card(child: Center(child: CircularProgressIndicator()));
+                    return Card(
+                        child: Center(child: CircularProgressIndicator()));
                   }
                   final busesProximasVencer = snapshot.data?[0] ?? [];
                   final busesVencidas = snapshot.data?[1] ?? [];
-                  return _buildAlertasRevisionTecnicaCard(busesProximasVencer, busesVencidas);
+
+                  return Row(
+                    children: [
+                      // Columna izquierda - Vencidas
+                      Expanded(
+                        child: _buildRevisionTecnicaVencidaCard(busesVencidas),
+                      ),
+                      SizedBox(width: 20),
+                      // Columna derecha - Próximas a vencer
+                      Expanded(
+                        child: _buildRevisionTecnicaProximaCard(
+                            busesProximasVencer),
+                      ),
+                    ],
+                  );
                 },
               ),
             ),
@@ -81,7 +96,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return FutureBuilder<List<Bus>>(
       future: DataService.getBusesConKilometrajeProximo(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting || !snapshot.hasData || snapshot.data!.isEmpty) {
+        if (snapshot.connectionState == ConnectionState.waiting ||
+            !snapshot.hasData ||
+            snapshot.data!.isEmpty) {
           // Si no hay buses en esta categoría, no muestra nada.
           return SizedBox.shrink();
         }
@@ -102,22 +119,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+                    Icon(Icons.warning_amber_rounded,
+                        color: Colors.orange, size: 24),
                     SizedBox(width: 12),
                     Text(
                       'Aviso de Mantenimiento Próximo',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange[800]),
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[800]),
                     ),
                     Spacer(),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.orange,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         '${busesConAviso.length} ${busesConAviso.length > 1 ? "BUSES" : "BUS"} REQUIEREN ATENCIÓN',
-                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -176,7 +201,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Text(
                 'Faltan ${_formatNumber(diferencia)} km',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange[800], fontSize: 13),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange[800],
+                    fontSize: 13),
               ),
               Text(
                 'Actual: ${_formatNumber(kmActual)}',
@@ -192,7 +220,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
 
   // --- Widgets existentes (con pequeñas modificaciones o sin cambios) ---
 
@@ -220,7 +247,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: Colors.red[50],
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text('Error al cargar alertas de kilometraje: ${snapshot.error}'),
+              child: Text(
+                  'Error al cargar alertas de kilometraje: ${snapshot.error}'),
             ),
           );
         }
@@ -244,7 +272,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.check_circle_outline, color: Colors.green, size: 24),
+                      Icon(Icons.check_circle_outline,
+                          color: Colors.green, size: 24),
                       SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -297,18 +326,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     SizedBox(width: 12),
                     Text(
                       'Alerta de Mantenimiento por Kilometraje',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red[800]),
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red[800]),
                     ),
                     Spacer(),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.red,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         '${busesConAlerta.length} ${busesConAlerta.length > 1 ? "BUSES REQUIEREN" : "BUS REQUIERE"} ATENCIÓN',
-                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -367,7 +403,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Text(
                 'Excedido por ${_formatNumber(diferencia)}',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red[800], fontSize: 13),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red[800],
+                    fontSize: 13),
               ),
               Text(
                 'Actual: ${_formatNumber(kmActual)}',
@@ -389,13 +428,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       future: DataService.getEstadisticas(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(height: 80, child: Center(child: CircularProgressIndicator()));
+          return Container(
+              height: 80, child: Center(child: CircularProgressIndicator()));
         }
 
         if (snapshot.hasError) {
           return Container(
             height: 80,
-            child: Center(child: Text('Error al cargar estadísticas: ${snapshot.error}')),
+            child: Center(
+                child: Text('Error al cargar estadísticas: ${snapshot.error}')),
           );
         }
 
@@ -404,17 +445,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Text(
               'Estado de la Flota:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[800]),
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800]),
             ),
             SizedBox(width: 24),
             Expanded(
               child: Row(
                 children: [
-                  Expanded(child: _buildStatCard('Disponibles', (stats['disponibles'] ?? 0).toString(), Icons.check_circle, Colors.green)),
+                  Expanded(
+                      child: _buildStatCard(
+                          'Disponibles',
+                          (stats['disponibles'] ?? 0).toString(),
+                          Icons.check_circle,
+                          Colors.green)),
                   SizedBox(width: 12),
-                  Expanded(child: _buildStatCard('En Reparación', (stats['enReparacion'] ?? 0).toString(), Icons.build, Colors.orange)),
+                  Expanded(
+                      child: _buildStatCard(
+                          'En Reparación',
+                          (stats['enReparacion'] ?? 0).toString(),
+                          Icons.build,
+                          Colors.orange)),
                   SizedBox(width: 12),
-                  Expanded(child: _buildStatCard('Fuera Servicio', (stats['fueraServicio'] ?? 0).toString(), Icons.cancel, Colors.red)),
+                  Expanded(
+                      child: _buildStatCard(
+                          'Fuera Servicio',
+                          (stats['fueraServicio'] ?? 0).toString(),
+                          Icons.cancel,
+                          Colors.red)),
                 ],
               ),
             ),
@@ -435,7 +494,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -449,7 +509,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   value,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+                  style: TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold, color: color),
                 ),
                 Text(
                   title,
@@ -484,54 +545,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Expanded(
               child: busesEnReparacion.isEmpty
                   ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.check_circle, size: 64, color: Colors.green),
-                    SizedBox(height: 16),
-                    Text('No hay buses en reparación', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                    SizedBox(height: 8),
-                    Text('Toda la flota está operativa', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                  ],
-                ),
-              )
-                  : ListView.builder(
-                itemCount: busesEnReparacion.length,
-                itemBuilder: (context, index) {
-                  final bus = busesEnReparacion[index];
-                  return Card(
-                    margin: EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: Icon(Icons.build, color: Colors.orange, size: 24),
-                      title: Text('${bus.identificadorDisplay}', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SizedBox(height: 4),
-                          Text('${bus.marca} ${bus.modelo} (${bus.anio})'),
-                          if (bus.ubicacionActual != null)
-                            Text('Ubicación: ${bus.ubicacionActual}'),
-                          if (bus.totalMantenimientosRealizados > 0)
-                            Text('Mantenimientos realizados: ${bus.totalMantenimientosRealizados}',
-                                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                          Icon(Icons.check_circle,
+                              size: 64, color: Colors.green),
+                          SizedBox(height: 16),
+                          Text('No hay buses en reparación',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w500)),
+                          SizedBox(height: 8),
+                          Text('Toda la flota está operativa',
+                              style: TextStyle(
+                                  fontSize: 14, color: Colors.grey[600])),
                         ],
                       ),
-                      trailing: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.orange,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'EN REPARACIÓN',
-                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    )
+                  : ListView.builder(
+                      itemCount: busesEnReparacion.length,
+                      itemBuilder: (context, index) {
+                        final bus = busesEnReparacion[index];
+                        return Card(
+                          margin: EdgeInsets.only(bottom: 12),
+                          child: ListTile(
+                            leading: Icon(Icons.build,
+                                color: Colors.orange, size: 24),
+                            title: Text('${bus.identificadorDisplay}',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 15)),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(height: 4),
+                                Text(
+                                    '${bus.marca} ${bus.modelo} (${bus.anio})'),
+                                if (bus.ubicacionActual != null)
+                                  Text('Ubicación: ${bus.ubicacionActual}'),
+                                if (bus.totalMantenimientosRealizados > 0)
+                                  Text(
+                                      'Mantenimientos realizados: ${bus.totalMantenimientosRealizados}',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600])),
+                              ],
+                            ),
+                            trailing: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'EN REPARACIÓN',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),
@@ -539,10 +617,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildAlertasRevisionTecnicaCard(List<Bus> busesProximasVencer, List<Bus> busesVencidas) {
-    final totalAlertas = busesProximasVencer.length + busesVencidas.length;
-
+  // Card para revisiones técnicas VENCIDAS (columna izquierda)
+  Widget _buildRevisionTecnicaVencidaCard(List<Bus> busesVencidas) {
     return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.red.withOpacity(0.3), width: 2),
+      ),
       child: Padding(
         padding: EdgeInsets.all(20),
         child: Column(
@@ -550,83 +632,311 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.assignment_turned_in, color: Colors.red, size: 24),
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.error, color: Colors.red, size: 24),
+                ),
                 SizedBox(width: 12),
-                Text(
-                  'Revisión Técnica - Estado Normativo',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Revisión Técnica Vencida',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red[800],
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '${busesVencidas.length} ${busesVencidas.length == 1 ? 'bus' : 'buses'}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 16),
+            Divider(),
+            SizedBox(height: 8),
             Expanded(
-              child: totalAlertas == 0
+              child: busesVencidas.isEmpty
                   ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.check_circle, size: 64, color: Colors.green),
-                    SizedBox(height: 16),
-                    Text('Todas las revisiones al día', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                    SizedBox(height: 8),
-                    Text('Cumplimiento normativo 100%', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                  ],
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle,
+                              size: 48, color: Colors.green),
+                          SizedBox(height: 12),
+                          Text(
+                            'Sin revisiones vencidas',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            '¡Todo en orden!',
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: busesVencidas.length,
+                      itemBuilder: (context, index) {
+                        final bus = busesVencidas[index];
+                        return Card(
+                          color: Colors.red[50],
+                          margin: EdgeInsets.only(bottom: 12),
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(
+                                color: Colors.red.withOpacity(0.3), width: 1),
+                          ),
+                          child: ListTile(
+                            leading: Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.error,
+                                  color: Colors.white, size: 20),
+                            ),
+                            title: Text(
+                              bus.identificadorDisplay,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Icon(Icons.calendar_today,
+                                        size: 14, color: Colors.red[700]),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Vencida hace ${-bus.diasParaVencimientoRevision} días',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.red[900],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '${bus.marca} ${bus.modelo}',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ],
+                            ),
+                            trailing: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'CRÍTICO',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Card para revisiones técnicas PRÓXIMAS A VENCER (columna derecha)
+  Widget _buildRevisionTecnicaProximaCard(List<Bus> busesProximasVencer) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.orange.withOpacity(0.3), width: 2),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.warning, color: Colors.orange, size: 24),
                 ),
-              )
-                  : ListView(
-                children: [
-                  ...busesVencidas.map((bus) => Card(
-                    color: Colors.red[50],
-                    margin: EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: Icon(Icons.error, color: Colors.red, size: 24),
-                      title: Text(bus.identificadorDisplay, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Próximas a Vencer',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[800],
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '${busesProximasVencer.length} ${busesProximasVencer.length == 1 ? 'bus' : 'buses'}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Divider(),
+            SizedBox(height: 8),
+            Expanded(
+              child: busesProximasVencer.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SizedBox(height: 4),
-                          Text('VENCIDA hace ${-bus.diasParaVencimientoRevision} días'),
-                          Text('${bus.marca} ${bus.modelo}'),
+                          Icon(Icons.check_circle,
+                              size: 48, color: Colors.green),
+                          SizedBox(height: 12),
+                          Text(
+                            'Sin vencimientos próximos',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Todo bajo control',
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey[600]),
+                          ),
                         ],
                       ),
-                      trailing: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text('CRÍTICO', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    )
+                  : ListView.builder(
+                      itemCount: busesProximasVencer.length,
+                      itemBuilder: (context, index) {
+                        final bus = busesProximasVencer[index];
+                        return Card(
+                          color: Colors.orange[50],
+                          margin: EdgeInsets.only(bottom: 12),
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(
+                                color: Colors.orange.withOpacity(0.3),
+                                width: 1),
+                          ),
+                          child: ListTile(
+                            leading: Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.warning,
+                                  color: Colors.white, size: 20),
+                            ),
+                            title: Text(
+                              bus.identificadorDisplay,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Icon(Icons.calendar_today,
+                                        size: 14, color: Colors.orange[700]),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Vence en ${bus.diasParaVencimientoRevision} días',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.orange[900],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '${bus.marca} ${bus.modelo}',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ],
+                            ),
+                            trailing: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'URGENTE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                          ),
+                        );
+                      },
                     ),
-                  )),
-                  ...busesProximasVencer.map((bus) => Card(
-                    color: Colors.orange[50],
-                    margin: EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: Icon(Icons.warning, color: Colors.orange, size: 24),
-                      title: Text(bus.identificadorDisplay, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 4),
-                          Text('Vence en ${bus.diasParaVencimientoRevision} días'),
-                          Text('${bus.marca} ${bus.modelo}'),
-                        ],
-                      ),
-                      trailing: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.orange,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text('URGENTE', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    ),
-                  )),
-                ],
-              ),
             ),
           ],
         ),

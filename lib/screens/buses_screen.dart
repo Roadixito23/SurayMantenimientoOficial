@@ -20,15 +20,9 @@ class BusesScreen extends StatefulWidget {
   _BusesScreenState createState() => _BusesScreenState();
 }
 
-class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin {
+class _BusesScreenState extends State<BusesScreen>
+    with TickerProviderStateMixin {
   // --- STATE & CONTROLLERS ---
-  String _filtroEstado = 'Todos';
-  String _filtroTexto = '';
-  String _filtroOrden = 'patente';
-  String _filtroMantenimiento = 'Todos';
-  bool _ordenAscendente = true;
-
-  late TextEditingController _searchController;
   late AnimationController _filterAnimationController;
   late AnimationController _fadeAnimationController;
   final ScrollController _horizontalScrollController = ScrollController();
@@ -44,7 +38,6 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _searchController = TextEditingController();
     _filterAnimationController = AnimationController(
       duration: Duration(milliseconds: 300),
       vsync: this,
@@ -57,7 +50,6 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
 
   @override
   void dispose() {
-    _searchController.dispose();
     _filterAnimationController.dispose();
     _fadeAnimationController.dispose();
     _horizontalScrollController.dispose();
@@ -72,99 +64,12 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
       _cachedBuses = await DataService.getBuses();
     }
 
-    var filtered = List<Bus>.from(_cachedBuses!);
+    var buses = List<Bus>.from(_cachedBuses!);
 
-    if (_filtroEstado != 'Todos') {
-      EstadoBus estado;
-      switch (_filtroEstado) {
-        case 'Disponible':
-          estado = EstadoBus.disponible;
-          break;
-        case 'En Reparación':
-          estado = EstadoBus.enReparacion;
-          break;
-        case 'Fuera de Servicio':
-          estado = EstadoBus.fueraDeServicio;
-          break;
-        default:
-          estado = EstadoBus.disponible;
-      }
-      filtered = filtered.where((b) => b.estado == estado).toList();
-    }
+    // Ordenar por patente ascendente
+    buses.sort((a, b) => a.patente.compareTo(b.patente));
 
-    if (_filtroMantenimiento != 'Todos') {
-      switch (_filtroMantenimiento) {
-        case 'Mantenimiento Vencido':
-          filtered = filtered.where((b) => b.tieneMantenimientosVencidos).toList();
-          break;
-        case 'Mantenimiento Urgente':
-          filtered = filtered.where((b) => b.tieneMantenimientosUrgentes).toList();
-          break;
-        case 'Mantenimiento Al Día':
-          filtered = filtered.where((b) =>
-          !b.tieneMantenimientosVencidos && !b.tieneMantenimientosUrgentes
-          ).toList();
-          break;
-        case 'Sin Configurar':
-          filtered = filtered.where((b) => b.mantenimientoPreventivo == null).toList();
-          break;
-      }
-    }
-
-    if (_filtroTexto.isNotEmpty) {
-      final txt = _filtroTexto.toLowerCase();
-      filtered = filtered.where((b) =>
-      b.patente.toLowerCase().contains(txt) ||
-          b.marca.toLowerCase().contains(txt) ||
-          b.modelo.toLowerCase().contains(txt) ||
-          (b.identificador?.toLowerCase().contains(txt) ?? false) ||
-          (b.ubicacionActual?.toLowerCase().contains(txt) ?? false)
-      ).toList();
-    }
-
-    _sortBuses(filtered);
-    return filtered;
-  }
-
-  void _refreshBuses() {
-    setState(() {
-      _cachedBuses = null;
-      _busesFuture = null;
-    });
-  }
-
-  void _sortBuses(List<Bus> buses) {
-    buses.sort((a, b) {
-      int cmp;
-      switch (_filtroOrden) {
-        case 'marca':
-          cmp = a.marca.compareTo(b.marca);
-          break;
-        case 'año':
-          cmp = a.anio.compareTo(b.anio);
-          break;
-        case 'estado':
-          cmp = a.estado.toString().compareTo(b.estado.toString());
-          break;
-        case 'kilometraje':
-          cmp = (a.kilometraje ?? 0).compareTo(b.kilometraje ?? 0);
-          break;
-        case 'kilometraje_ideal':
-          cmp = (a.kilometrajeIdeal ?? 0).compareTo(b.kilometrajeIdeal ?? 0);
-          break;
-        case 'fecha_ideal':
-          cmp = MantenimientoConfig.calcularFechaIdeal(a).compareTo(
-              MantenimientoConfig.calcularFechaIdeal(b));
-          break;
-        case 'ubicacion':
-          cmp = (a.ubicacionActual ?? '').compareTo(b.ubicacionActual ?? '');
-          break;
-        case 'patente':
-        default:
-          cmp = a.patente.compareTo(b.patente);
-      }
-      return _ordenAscendente ? cmp : -cmp;
-    });
+    return buses;
   }
 
   // --- UI & WIDGETS ---
@@ -176,48 +81,49 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
 
     return Scaffold(
       backgroundColor: SurayColors.blancoHumo,
-      body: Column(
-        children: [
-          _buildFilterPanel(),
-          Expanded(
-            child: FutureBuilder<List<Bus>>(
-              future: _busesFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return _buildLoadingState();
-                }
-                if (snapshot.hasError) {
-                  return _buildErrorState(snapshot.error.toString());
-                }
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _mostrarDialogoBus(context),
+        icon: Icon(Icons.add),
+        label: Text('Nuevo Bus'),
+        backgroundColor: SurayColors.naranjaQuemado,
+        foregroundColor: Colors.white,
+        elevation: 4,
+      ),
+      body: FutureBuilder<List<Bus>>(
+        future: _busesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return _buildLoadingState();
+          }
+          if (snapshot.hasError) {
+            return _buildErrorState(snapshot.error.toString());
+          }
 
-                final allBuses = snapshot.data ?? [];
-                final total = allBuses.length;
-                final totalPages = (total / _itemsPerPage).ceil();
-                if (_currentPage >= totalPages && totalPages > 0) {
-                  _currentPage = totalPages - 1;
-                }
+          final allBuses = snapshot.data ?? [];
+          final total = allBuses.length;
+          final totalPages = (total / _itemsPerPage).ceil();
+          if (_currentPage >= totalPages && totalPages > 0) {
+            _currentPage = totalPages - 1;
+          }
 
-                final start = (_currentPage * _itemsPerPage).clamp(0, total);
-                final end = ((start + _itemsPerPage)).clamp(0, total);
-                final pageBuses = allBuses.sublist(start, end);
+          final start = (_currentPage * _itemsPerPage).clamp(0, total);
+          final end = ((start + _itemsPerPage)).clamp(0, total);
+          final pageBuses = allBuses.sublist(start, end);
 
-                return FadeTransition(
-                  opacity: _fadeAnimationController,
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: total == 0
-                            ? _buildEmptyState()
-                            : _buildTableView(pageBuses),
-                      ),
-                      if (total > 0) _buildPagination(total),
-                    ],
-                  ),
-                );
-              },
+          return FadeTransition(
+            opacity: _fadeAnimationController,
+            child: Column(
+              children: [
+                Expanded(
+                  child: total == 0
+                      ? _buildEmptyState()
+                      : _buildTableView(pageBuses),
+                ),
+                if (total > 0) _buildPagination(total),
+              ],
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -307,10 +213,15 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
                     return Wrap(
                       spacing: 16,
                       children: [
-                        _buildStatChip('${s['total']} buses', Icons.directions_bus),
-                        _buildStatChip('${s['disponibles']} disponibles', Icons.check_circle),
-                        _buildStatChip('${s['alertasMantenimiento']} alertas mant.', Icons.warning),
-                        _buildStatChip('${s['alertas']} rev. técnica', Icons.assignment_late),
+                        _buildStatChip(
+                            '${s['total']} buses', Icons.directions_bus),
+                        _buildStatChip('${s['disponibles']} disponibles',
+                            Icons.check_circle),
+                        _buildStatChip(
+                            '${s['alertasMantenimiento']} alertas mant.',
+                            Icons.warning),
+                        _buildStatChip('${s['alertas']} rev. técnica',
+                            Icons.assignment_late),
                       ],
                     );
                   },
@@ -430,331 +341,6 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
     }
   }
 
-  Widget _buildFilterPanel() {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            SurayColors.azulMarinoProfundo,
-            SurayColors.azulMarinoClaro,
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: SurayColors.azulMarinoProfundo.withOpacity(0.3),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header con título y botón Nuevo Bus
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: SurayColors.naranjaQuemado,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: SurayColors.naranjaQuemado.withOpacity(0.4),
-                      blurRadius: 8,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.directions_bus,
-                  color: SurayColors.blancoHumo,
-                  size: 28,
-                ),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Gestión de Flota',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: SurayColors.blancoHumo,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    FutureBuilder<Map<String, int>>(
-                      future: _getEstadisticasRapidas(),
-                      builder: (context, snap) {
-                        if (!snap.hasData) return SizedBox.shrink();
-                        final s = snap.data!;
-                        return Wrap(
-                          spacing: 16,
-                          children: [
-                            _buildStatChip('${s['total']} buses', Icons.directions_bus),
-                            _buildStatChip('${s['disponibles']} disponibles', Icons.check_circle),
-                            _buildStatChip('${s['alertasMantenimiento']} alertas mant.', Icons.warning),
-                            _buildStatChip('${s['alertas']} rev. técnica', Icons.assignment_late),
-                          ],
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 16),
-              _buildModernButton(
-                onPressed: () => _mostrarDialogoBus(context),
-                icon: Icons.add_circle,
-                label: 'Nuevo Bus',
-                color: SurayColors.naranjaQuemado,
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          // Filtros en una segunda fila
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: SurayColors.blancoHumo.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                // Búsqueda
-                Expanded(
-                  flex: 2,
-                  child: _buildSearchField(),
-                ),
-                SizedBox(width: 12),
-                // Estado
-                Expanded(
-                  flex: 1,
-                  child: _buildDropdownFilter(
-                    value: _filtroEstado,
-                    label: 'Estado',
-                    items: ['Todos', 'Disponible', 'En Reparación', 'Fuera de Servicio'],
-                    onChanged: (v) {
-                      setState(() {
-                        _filtroEstado = v!;
-                        _currentPage = 0;
-                        _busesFuture = null;
-                      });
-                    },
-                  ),
-                ),
-                SizedBox(width: 12),
-                // Mantenimiento
-                Expanded(
-                  flex: 1,
-                  child: _buildDropdownFilter(
-                    value: _filtroMantenimiento,
-                    label: 'Mantenimiento',
-                    items: [
-                      'Todos',
-                      'Mantenimiento Vencido',
-                      'Mantenimiento Urgente',
-                      'Mantenimiento Al Día',
-                      'Sin Configurar'
-                    ],
-                    onChanged: (v) {
-                      setState(() {
-                        _filtroMantenimiento = v!;
-                        _currentPage = 0;
-                        _busesFuture = null;
-                      });
-                    },
-                  ),
-                ),
-                SizedBox(width: 12),
-                // Ordenar
-                Expanded(
-                  flex: 1,
-                  child: _buildDropdownFilter(
-                    value: _filtroOrden,
-                    label: 'Ordenar por',
-                    items: [
-                      'patente',
-                      'marca',
-                      'año',
-                      'estado',
-                      'kilometraje',
-                      'kilometraje_ideal',
-                      'fecha_ideal',
-                      'ubicacion'
-                    ],
-                    displayMapper: _labelOrden,
-                    onChanged: (v) {
-                      setState(() {
-                        _filtroOrden = v!;
-                        _busesFuture = null;
-                      });
-                    },
-                  ),
-                ),
-                SizedBox(width: 8),
-                _buildFilterIconButton(
-                  icon: _ordenAscendente ? Icons.arrow_upward : Icons.arrow_downward,
-                  tooltip: _ordenAscendente ? 'Ascendente' : 'Descendente',
-                  onPressed: () {
-                    setState(() {
-                      _ordenAscendente = !_ordenAscendente;
-                      _busesFuture = null;
-                    });
-                  },
-                ),
-                SizedBox(width: 8),
-                _buildClearButton(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchField() {
-    return TextField(
-      controller: _searchController,
-      style: TextStyle(color: SurayColors.azulMarinoProfundo),
-      decoration: InputDecoration(
-        labelText: 'Buscar buses',
-        labelStyle: TextStyle(color: SurayColors.blancoHumo.withOpacity(0.9)),
-        hintText: 'Patente, marca, modelo...',
-        hintStyle: TextStyle(color: SurayColors.blancoHumo.withOpacity(0.6)),
-        prefixIcon: Icon(Icons.search, color: SurayColors.blancoHumo.withOpacity(0.9)),
-        suffixIcon: _filtroTexto.isNotEmpty
-            ? IconButton(
-          icon: Icon(Icons.clear, color: SurayColors.blancoHumo.withOpacity(0.9)),
-          onPressed: () {
-            _searchController.clear();
-            setState(() {
-              _filtroTexto = '';
-              _currentPage = 0;
-              _busesFuture = null;
-            });
-          },
-        )
-            : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: SurayColors.naranjaQuemado, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.15),
-      ),
-      onChanged: (v) {
-        setState(() {
-          _filtroTexto = v;
-          _currentPage = 0;
-          _busesFuture = null;
-        });
-      },
-    );
-  }
-
-  Widget _buildDropdownFilter({
-    required String value,
-    required String label,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-    String Function(String)? displayMapper,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        filled: true,
-        fillColor: SurayColors.blancoHumo,
-      ),
-      items: items
-          .map((e) => DropdownMenuItem(
-        value: e,
-        child: Text(displayMapper != null ? displayMapper(e) : e),
-      ))
-          .toList(),
-      onChanged: onChanged,
-    );
-  }
-
-  Widget _buildFilterIconButton({
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onPressed,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: SurayColors.azulMarinoProfundo.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: SurayColors.azulMarinoProfundo.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: SurayColors.azulMarinoProfundo),
-        tooltip: tooltip,
-        onPressed: onPressed,
-      ),
-    );
-  }
-
-  Widget _buildClearButton() {
-    return ElevatedButton.icon(
-      onPressed: _limpiarFiltros,
-      icon: Icon(Icons.clear_all, size: 18),
-      label: Text('Limpiar'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: SurayColors.grisAntracita,
-        foregroundColor: SurayColors.blancoHumo,
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-    );
-  }
-
-  String _labelOrden(String key) {
-    switch (key) {
-      case 'patente':
-        return 'Patente';
-      case 'marca':
-        return 'Marca';
-      case 'año':
-        return 'Año';
-      case 'estado':
-        return 'Estado';
-      case 'kilometraje':
-        return 'Km Actual';
-      case 'kilometraje_ideal':
-        return 'Km Ideal';
-      case 'fecha_ideal':
-        return 'Fecha Ideal';
-      case 'ubicacion':
-        return 'Ubicación';
-      default:
-        return key;
-    }
-  }
-
   Widget _buildInfoTip() {
     return Container(
       margin: EdgeInsets.all(16),
@@ -801,13 +387,13 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
       140.0, // Patente
       120.0, // Marca
       140.0, // Modelo
-      80.0,  // Año
+      80.0, // Año
       140.0, // Estado
       150.0, // Km Actual
       150.0, // Km Ideal
       150.0, // Fecha Ideal
       160.0, // Revisión Técnica
-      200.0  // Ubicación
+      200.0 // Ubicación
     ];
 
     final totalWidth = columnWidths.reduce((a, b) => a + b);
@@ -840,11 +426,23 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
               data: ScrollbarThemeData(
                 thumbVisibility: MaterialStateProperty.all(true),
                 trackVisibility: MaterialStateProperty.all(true),
-                thickness: MaterialStateProperty.all(16),
-                thumbColor: MaterialStateProperty.all(SurayColors.naranjaQuemado.withOpacity(0.8)),
-                trackColor: MaterialStateProperty.all(SurayColors.grisAntracita.withOpacity(0.15)),
-                trackBorderColor: MaterialStateProperty.all(SurayColors.grisAntracita.withOpacity(0.25)),
-                radius: Radius.circular(10),
+                thickness: MaterialStateProperty.all(8),
+                thumbColor: MaterialStateProperty.resolveWith((states) {
+                  if (states.contains(MaterialState.hovered)) {
+                    return SurayColors.naranjaQuemado.withOpacity(0.7);
+                  }
+                  if (states.contains(MaterialState.dragged)) {
+                    return SurayColors.naranjaQuemado.withOpacity(0.9);
+                  }
+                  return SurayColors.naranjaQuemado.withOpacity(0.5);
+                }),
+                trackColor: MaterialStateProperty.all(
+                    SurayColors.azulMarinoProfundo.withOpacity(0.08)),
+                trackBorderColor: MaterialStateProperty.all(
+                    SurayColors.azulMarinoProfundo.withOpacity(0.15)),
+                radius: Radius.circular(8),
+                crossAxisMargin: 2,
+                mainAxisMargin: 4,
               ),
               child: Scrollbar(
                 controller: _horizontalScrollController,
@@ -865,11 +463,23 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
               data: ScrollbarThemeData(
                 thumbVisibility: MaterialStateProperty.all(true),
                 trackVisibility: MaterialStateProperty.all(true),
-                thickness: MaterialStateProperty.all(16),
-                thumbColor: MaterialStateProperty.all(SurayColors.naranjaQuemado.withOpacity(0.8)),
-                trackColor: MaterialStateProperty.all(SurayColors.grisAntracita.withOpacity(0.15)),
-                trackBorderColor: MaterialStateProperty.all(SurayColors.grisAntracita.withOpacity(0.25)),
-                radius: Radius.circular(10),
+                thickness: MaterialStateProperty.all(8),
+                thumbColor: MaterialStateProperty.resolveWith((states) {
+                  if (states.contains(MaterialState.hovered)) {
+                    return SurayColors.naranjaQuemado.withOpacity(0.7);
+                  }
+                  if (states.contains(MaterialState.dragged)) {
+                    return SurayColors.naranjaQuemado.withOpacity(0.9);
+                  }
+                  return SurayColors.naranjaQuemado.withOpacity(0.5);
+                }),
+                trackColor: MaterialStateProperty.all(
+                    SurayColors.azulMarinoProfundo.withOpacity(0.08)),
+                trackBorderColor: MaterialStateProperty.all(
+                    SurayColors.azulMarinoProfundo.withOpacity(0.15)),
+                radius: Radius.circular(8),
+                crossAxisMargin: 2,
+                mainAxisMargin: 4,
                 interactive: true,
               ),
               child: Scrollbar(
@@ -884,7 +494,8 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
                       child: ListView.builder(
                         controller: _verticalScrollController,
                         itemCount: buses.length,
-                        itemBuilder: (_, i) => _buildTableRow(buses[i], i.isEven),
+                        itemBuilder: (_, i) =>
+                            _buildTableRow(buses[i], i.isEven),
                       ),
                     ),
                   ),
@@ -929,19 +540,7 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
         ),
       ),
       child: Row(
-        children: headers
-            .map((h) => h.build(
-            context, _filtroOrden, _ordenAscendente, () => setState(() {
-          if (h.sortKey != null) {
-            if (_filtroOrden == h.sortKey) {
-              _ordenAscendente = !_ordenAscendente;
-            } else {
-              _filtroOrden = h.sortKey!;
-              _ordenAscendente = true;
-            }
-          }
-        })))
-            .toList(),
+        children: headers.map((h) => h.buildSimple(context)).toList(),
       ),
     );
   }
@@ -958,187 +557,418 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
     showDialog(
       context: context,
       barrierColor: SurayColors.azulMarinoProfundo.withOpacity(0.5),
-      builder: (ctx) => TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.0, end: 1.0),
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        builder: (context, value, child) {
-          return Transform.scale(
-            scale: 0.8 + (0.2 * value),
-            child: Opacity(
-              opacity: value,
-              child: AlertDialog(
-                backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                title: Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        SurayColors.azulMarinoProfundo,
-                        SurayColors.azulMarinoClaro,
+      builder: (ctx) {
+        // Obtener dimensiones de la pantalla
+        final screenSize = MediaQuery.of(ctx).size;
+        final isSmallScreen = screenSize.width < 600 || screenSize.height < 700;
+        final dialogWidth = isSmallScreen ? screenSize.width * 0.95 : 450.0;
+        final maxDialogHeight =
+            screenSize.height * (isSmallScreen ? 0.85 : 0.75);
+
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: 0.8 + (0.2 * value),
+              child: Opacity(
+                opacity: value,
+                child: Dialog(
+                  backgroundColor: Colors.transparent,
+                  insetPadding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 10 : 24,
+                    vertical: isSmallScreen ? 20 : 40,
+                  ),
+                  child: Container(
+                    width: dialogWidth,
+                    constraints: BoxConstraints(
+                      maxHeight: maxDialogHeight,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              SurayColors.azulMarinoProfundo.withOpacity(0.3),
+                          blurRadius: 20,
+                          spreadRadius: 5,
+                        ),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.directions_bus, color: SurayColors.blancoHumo),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Acciones para ${bus.patente}',
-                          style: TextStyle(
-                            color: SurayColors.blancoHumo,
-                            fontSize: 18,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Header fijo con gradiente
+                        Container(
+                          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                SurayColors.azulMarinoProfundo,
+                                SurayColors.azulMarinoClaro,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.directions_bus,
+                                  color: SurayColors.blancoHumo,
+                                  size: isSmallScreen ? 20 : 24,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Acciones',
+                                      style: TextStyle(
+                                        color: SurayColors.blancoHumo
+                                            .withOpacity(0.9),
+                                        fontSize: isSmallScreen ? 12 : 13,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      bus.patente,
+                                      style: TextStyle(
+                                        color: SurayColors.blancoHumo,
+                                        fontSize: isSmallScreen ? 18 : 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.close,
+                                    color: SurayColors.blancoHumo),
+                                onPressed: () => Navigator.pop(ctx),
+                                padding: EdgeInsets.all(8),
+                                constraints: BoxConstraints(),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
+
+                        // Contenido con scroll visible
+                        Flexible(
+                          child: Scrollbar(
+                            thumbVisibility: true,
+                            thickness: 6,
+                            radius: Radius.circular(10),
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                              child: Column(
+                                children: [
+                                  // Sección de acciones principales
+                                  _buildSectionTitle(
+                                      'Acciones Principales', isSmallScreen),
+                                  SizedBox(height: 8),
+                                  _buildActionOption(
+                                    icon: Icons.speed,
+                                    label: 'Actualizar Kilometraje',
+                                    description:
+                                        'Registrar kilómetros actuales',
+                                    color: SurayColors.azulMarinoProfundo,
+                                    isSmallScreen: isSmallScreen,
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      _actualizarKilometraje(context, bus);
+                                    },
+                                  ),
+                                  SizedBox(height: 8),
+                                  _buildActionOption(
+                                    icon: Icons.verified_user,
+                                    label: 'Actualizar Revisión Técnica',
+                                    description:
+                                        'Registrar nueva fecha de revisión',
+                                    color: Color(0xFF00897B),
+                                    isSmallScreen: isSmallScreen,
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      _actualizarRevisionTecnica(context, bus);
+                                    },
+                                  ),
+                                  SizedBox(height: 8),
+                                  _buildActionOption(
+                                    icon: Icons.assignment,
+                                    label: 'Registrar Mantenimiento',
+                                    description: 'Crear nuevo registro',
+                                    color: SurayColors.naranjaQuemado,
+                                    isSmallScreen: isSmallScreen,
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      _registrarMantenimiento(context, bus);
+                                    },
+                                  ),
+                                  SizedBox(height: 8),
+                                  _buildActionOption(
+                                    icon: Icons.build_circle,
+                                    label: 'Asignar Repuesto',
+                                    description: 'Vincular repuestos al bus',
+                                    color: SurayColors.azulMarinoClaro,
+                                    isSmallScreen: isSmallScreen,
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      _asignarRepuesto(context, bus);
+                                    },
+                                  ),
+                                  SizedBox(height: 8),
+                                  _buildActionOption(
+                                    icon: Icons.history,
+                                    label: 'Historial Completo',
+                                    description: 'Ver todos los registros',
+                                    color: Color(0xFF607D8B),
+                                    isSmallScreen: isSmallScreen,
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      _mostrarHistorialCompleto(context, bus);
+                                    },
+                                  ),
+
+                                  // Divisor decorativo
+                                  SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Divider(
+                                          color: SurayColors.grisAntracitaClaro
+                                              .withOpacity(0.3),
+                                          thickness: 1,
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 12),
+                                        child: Text(
+                                          'Otras Opciones',
+                                          style: TextStyle(
+                                            color: SurayColors.grisAntracita
+                                                .withOpacity(0.6),
+                                            fontSize: isSmallScreen ? 11 : 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Divider(
+                                          color: SurayColors.grisAntracitaClaro
+                                              .withOpacity(0.3),
+                                          thickness: 1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 12),
+
+                                  // Acciones secundarias compactas
+                                  _buildActionOption(
+                                    icon: Icons.edit,
+                                    label: 'Editar Bus',
+                                    description: 'Modificar información',
+                                    color: SurayColors.grisAntracita,
+                                    iconSize: 18,
+                                    isSecondary: true,
+                                    isSmallScreen: isSmallScreen,
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      _mostrarDialogoBus(context, bus: bus);
+                                    },
+                                  ),
+                                  SizedBox(height: 8),
+                                  _buildActionOption(
+                                    icon: Icons.delete_forever,
+                                    label: 'Eliminar Bus',
+                                    description: 'Borrar permanentemente',
+                                    color: Colors.red.shade700,
+                                    iconSize: 18,
+                                    isSecondary: true,
+                                    isSmallScreen: isSmallScreen,
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      _eliminarBus(bus.id);
+                                    },
+                                  ),
+                                  SizedBox(height: 8),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Acciones principales
-                    _buildActionOption(
-                      icon: Icons.speed,
-                      label: 'Actualizar Kilometraje',
-                      color: SurayColors.azulMarinoProfundo,
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _actualizarKilometraje(context, bus);
-                      },
-                    ),
-                    SizedBox(height: 8),
-                    _buildActionOption(
-                      icon: Icons.assignment,
-                      label: 'Registrar Mantenimiento',
-                      color: SurayColors.naranjaQuemado,
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _registrarMantenimiento(context, bus);
-                      },
-                    ),
-                    SizedBox(height: 8),
-                    _buildActionOption(
-                      icon: Icons.build_circle,
-                      label: 'Asignar Repuesto',
-                      color: SurayColors.azulMarinoClaro,
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _asignarRepuesto(context, bus);
-                      },
-                    ),
-                    SizedBox(height: 8),
-                    _buildActionOption(
-                      icon: Icons.history,
-                      label: 'Historial Completo',
-                      color: Color(0xFF607D8B),
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _mostrarHistorialCompleto(context, bus);
-                      },
-                    ),
-
-                    // Divisor para acciones secundarias
-                    SizedBox(height: 12),
-                    Divider(color: SurayColors.grisAntracitaClaro.withOpacity(0.3)),
-                    SizedBox(height: 4),
-
-                    // Acciones secundarias (menos frecuentes)
-                    _buildActionOption(
-                      icon: Icons.edit,
-                      label: 'Editar Bus',
-                      color: SurayColors.grisAntracita,
-                      iconSize: 16,
-                      isSecondary: true,
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _mostrarDialogoBus(context, bus: bus);
-                      },
-                    ),
-                    SizedBox(height: 6),
-                    _buildActionOption(
-                      icon: Icons.delete_forever,
-                      label: 'Eliminar Bus',
-                      color: Colors.red,
-                      iconSize: 16,
-                      isSecondary: true,
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _eliminarBus(bus.id);
-                      },
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text('Cerrar'),
-                  ),
-                ],
               ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSectionTitle(String title, bool isSmallScreen) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 20,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                SurayColors.azulMarinoProfundo,
+                SurayColors.azulMarinoClaro,
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-          );
-        },
-      ),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: isSmallScreen ? 14 : 15,
+            fontWeight: FontWeight.w600,
+            color: SurayColors.azulMarinoProfundo,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildActionOption({
     required IconData icon,
     required String label,
+    String? description,
     required Color color,
     required VoidCallback onTap,
-    double iconSize = 20,
+    double iconSize = 22,
     bool isSecondary = false,
+    bool isSmallScreen = false,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: isSecondary ? 10 : 14,
-        ),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: color.withOpacity(0.2),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(isSecondary ? 6 : 8),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: Colors.white, size: iconSize),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        splashColor: color.withOpacity(0.2),
+        highlightColor: color.withOpacity(0.1),
+        child: Container(
+          padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                color.withOpacity(0.05),
+                color.withOpacity(0.02),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: isSecondary ? 13 : 15,
-                  fontWeight: isSecondary ? FontWeight.w400 : FontWeight.w500,
-                  color: color,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: color.withOpacity(isSecondary ? 0.15 : 0.25),
+              width: isSecondary ? 1 : 1.5,
+            ),
+          ),
+          child: Row(
+            children: [
+              // Ícono con fondo
+              Container(
+                padding: EdgeInsets.all(isSecondary ? 8 : 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isSecondary
+                        ? [color, color]
+                        : [
+                            color,
+                            color.withOpacity(0.8),
+                          ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: isSecondary ? iconSize - 2 : iconSize,
                 ),
               ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: color.withOpacity(0.5),
-              size: isSecondary ? 18 : 24,
-            ),
-          ],
+              SizedBox(width: isSmallScreen ? 10 : 14),
+
+              // Texto con descripción
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: isSmallScreen
+                            ? (isSecondary ? 13 : 14)
+                            : (isSecondary ? 14 : 15),
+                        fontWeight:
+                            isSecondary ? FontWeight.w500 : FontWeight.w600,
+                        color: color,
+                        height: 1.2,
+                      ),
+                    ),
+                    if (description != null && !isSecondary) ...[
+                      SizedBox(height: 3),
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 11 : 12,
+                          fontWeight: FontWeight.w400,
+                          color: color.withOpacity(0.6),
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // Flecha indicadora
+              Container(
+                padding: EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.arrow_forward_ios,
+                  color: color.withOpacity(0.7),
+                  size: isSecondary ? 12 : 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1162,7 +992,8 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
         style: TextStyle(
           fontSize: 13,
           fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-          color: bold ? SurayColors.azulMarinoProfundo : SurayColors.grisAntracita,
+          color:
+              bold ? SurayColors.azulMarinoProfundo : SurayColors.grisAntracita,
         ),
       ),
     );
@@ -1275,9 +1106,7 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
         ),
       ),
       child: Text(
-        kilometraje != null
-            ? _formatKilometraje(kilometraje)
-            : 'No registrado',
+        kilometraje != null ? _formatKilometraje(kilometraje) : 'No registrado',
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
@@ -1494,6 +1323,258 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
     );
   }
 
+  void _actualizarRevisionTecnica(BuildContext context, Bus bus) {
+    final TextEditingController fechaController = TextEditingController();
+    DateTime? fechaSeleccionada = bus.fechaRevisionTecnica;
+
+    if (fechaSeleccionada != null) {
+      fechaController.text = ChileanUtils.formatDate(fechaSeleccionada);
+    }
+
+    showDialog(
+      context: context,
+      barrierColor: SurayColors.azulMarinoProfundo.withOpacity(0.5),
+      builder: (ctx) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: 0.8 + (0.2 * value),
+            child: Opacity(
+              opacity: value,
+              child: AlertDialog(
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                title: Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF00897B),
+                        Color(0xFF4DB6AC),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.verified_user, color: Colors.white, size: 28),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Revisión Técnica',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              bus.patente,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Actualizar fecha de revisión técnica',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: SurayColors.grisAntracita,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      TextField(
+                        controller: fechaController,
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          labelText: 'Fecha de Revisión Técnica',
+                          hintText: 'Seleccione una fecha',
+                          prefixIcon: Icon(Icons.calendar_today,
+                              color: Color(0xFF00897B)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                                color: Color(0xFF00897B), width: 1.5),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                                color: Color(0xFF00897B).withOpacity(0.3),
+                                width: 1.5),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: Color(0xFF00897B), width: 2),
+                          ),
+                        ),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: fechaSeleccionada ??
+                                DateTime.now().add(Duration(days: 365)),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(Duration(days: 730)),
+                            locale: Locale('es', 'CL'),
+                            builder: (context, child) {
+                              return Theme(
+                                data: ThemeData.light().copyWith(
+                                  colorScheme: ColorScheme.light(
+                                    primary: Color(0xFF00897B),
+                                    onPrimary: Colors.white,
+                                    surface: Colors.white,
+                                    onSurface: SurayColors.grisAntracita,
+                                  ),
+                                  dialogBackgroundColor: Colors.white,
+                                ),
+                                child: child!,
+                              );
+                            },
+                          );
+                          if (picked != null) {
+                            fechaSeleccionada = picked;
+                            fechaController.text =
+                                ChileanUtils.formatDate(picked);
+                          }
+                        },
+                      ),
+                      SizedBox(height: 16),
+                      if (fechaSeleccionada != null) ...[
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF00897B).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Color(0xFF00897B).withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline,
+                                  color: Color(0xFF00897B), size: 20),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Vigencia hasta: ${ChileanUtils.formatDate(fechaSeleccionada!)}',
+                                  style: TextStyle(
+                                    color: Color(0xFF00897B),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(
+                      'Cancelar',
+                      style: TextStyle(color: SurayColors.grisAntracita),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (fechaSeleccionada == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Por favor seleccione una fecha'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      try {
+                        final busActualizado = bus.copyWith(
+                          fechaRevisionTecnica: fechaSeleccionada,
+                        );
+                        await DataService.updateBus(busActualizado);
+
+                        Navigator.pop(ctx);
+                        setState(() {
+                          _cachedBuses = null;
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text(
+                                    'Revisión técnica actualizada correctamente'),
+                              ],
+                            ),
+                            backgroundColor: Color(0xFF00897B),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error al actualizar: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF00897B),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.save, size: 18),
+                        SizedBox(width: 8),
+                        Text('Guardar'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _asignarRepuesto(BuildContext context, Bus bus) {
     showDialog(
       context: context,
@@ -1624,12 +1705,18 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
     final buses = await DataService.getBuses();
     return {
       'total': buses.length,
-      'disponibles': buses.where((b) => b.estado == EstadoBus.disponible).length,
-      'enReparacion': buses.where((b) => b.estado == EstadoBus.enReparacion).length,
-      'alertasMantenimiento': buses.where((b) =>
-      b.tieneMantenimientosVencidos || b.tieneMantenimientosUrgentes).length,
-      'alertas': buses.where((b) =>
-      b.revisionTecnicaVencida || b.revisionTecnicaProximaAVencer).length,
+      'disponibles':
+          buses.where((b) => b.estado == EstadoBus.disponible).length,
+      'enReparacion':
+          buses.where((b) => b.estado == EstadoBus.enReparacion).length,
+      'alertasMantenimiento': buses
+          .where((b) =>
+              b.tieneMantenimientosVencidos || b.tieneMantenimientosUrgentes)
+          .length,
+      'alertas': buses
+          .where((b) =>
+              b.revisionTecnicaVencida || b.revisionTecnicaProximaAVencer)
+          .length,
     };
   }
 
@@ -1675,7 +1762,7 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
           SizedBox(width: 16),
           ...List.generate(
             totalPages > 10 ? 10 : totalPages,
-                (i) {
+            (i) {
               final pageIndex = totalPages > 10
                   ? (_currentPage > 5 ? _currentPage - 5 + i : i)
                   : i;
@@ -1726,22 +1813,11 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
   }) {
     return IconButton(
       icon: Icon(icon),
-      color: enabled ? SurayColors.azulMarinoProfundo : SurayColors.grisAntracitaClaro,
+      color: enabled
+          ? SurayColors.azulMarinoProfundo
+          : SurayColors.grisAntracitaClaro,
       onPressed: enabled ? onPressed : null,
     );
-  }
-
-  void _limpiarFiltros() {
-    setState(() {
-      _filtroEstado = 'Todos';
-      _filtroMantenimiento = 'Todos';
-      _filtroTexto = '';
-      _filtroOrden = 'patente';
-      _ordenAscendente = true;
-      _currentPage = 0;
-      _searchController.clear();
-      _busesFuture = null;
-    });
   }
 
   Widget _buildLoadingState() {
@@ -1845,11 +1921,7 @@ class _BusesScreenState extends State<BusesScreen> with TickerProviderStateMixin
             ),
             SizedBox(height: 24),
             Text(
-              (_filtroTexto.isNotEmpty ||
-                  _filtroEstado != 'Todos' ||
-                  _filtroMantenimiento != 'Todos')
-                  ? 'No hay buses con esos filtros'
-                  : 'No hay buses registrados',
+              'No hay buses registrados',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
@@ -1888,7 +1960,8 @@ class _HeaderCell {
   final String? sortKey;
   _HeaderCell(this.title, this.width, this.sortKey);
 
-  Widget build(BuildContext context, String currentSort, bool asc, VoidCallback onTap) {
+  Widget build(
+      BuildContext context, String currentSort, bool asc, VoidCallback onTap) {
     final active = sortKey != null && currentSort == sortKey;
     return Container(
       width: width,
@@ -1918,11 +1991,39 @@ class _HeaderCell {
             ),
             if (sortKey != null)
               Icon(
-                active ? (asc ? Icons.arrow_upward : Icons.arrow_downward) : Icons.sort,
+                active
+                    ? (asc ? Icons.arrow_upward : Icons.arrow_downward)
+                    : Icons.sort,
                 size: 16,
-                color: active ? SurayColors.naranjaQuemado : SurayColors.blancoHumo.withOpacity(0.6),
+                color: active
+                    ? SurayColors.naranjaQuemado
+                    : SurayColors.blancoHumo.withOpacity(0.6),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildSimple(BuildContext context) {
+    return Container(
+      width: width,
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: SurayColors.blancoHumo.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: SurayColors.blancoHumo,
+          letterSpacing: 0.5,
         ),
       ),
     );
@@ -1936,7 +2037,8 @@ class _MaintenanceConfigDialog extends StatefulWidget {
   _MaintenanceConfigDialog({required this.onConfigChanged});
 
   @override
-  _MaintenanceConfigDialogState createState() => _MaintenanceConfigDialogState();
+  _MaintenanceConfigDialogState createState() =>
+      _MaintenanceConfigDialogState();
 }
 
 class _MaintenanceConfigDialogState extends State<_MaintenanceConfigDialog> {
@@ -1946,8 +2048,10 @@ class _MaintenanceConfigDialogState extends State<_MaintenanceConfigDialog> {
   @override
   void initState() {
     super.initState();
-    _kmController = TextEditingController(text: MantenimientoConfig.kilometrajeIdeal.toString());
-    _diasController = TextEditingController(text: MantenimientoConfig.diasFechaIdeal.toString());
+    _kmController = TextEditingController(
+        text: MantenimientoConfig.kilometrajeIdeal.toString());
+    _diasController = TextEditingController(
+        text: MantenimientoConfig.diasFechaIdeal.toString());
   }
 
   @override
@@ -2028,7 +2132,8 @@ class _MaintenanceConfigDialogState extends State<_MaintenanceConfigDialog> {
               decoration: InputDecoration(
                 labelText: 'Kilometraje ideal para mantenimiento',
                 suffixText: 'km',
-                prefixIcon: Icon(Icons.speed, color: SurayColors.azulMarinoProfundo),
+                prefixIcon:
+                    Icon(Icons.speed, color: SurayColors.azulMarinoProfundo),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -2042,7 +2147,8 @@ class _MaintenanceConfigDialogState extends State<_MaintenanceConfigDialog> {
               decoration: InputDecoration(
                 labelText: 'Días ideales para mantenimiento',
                 suffixText: 'días',
-                prefixIcon: Icon(Icons.calendar_today, color: SurayColors.azulMarinoProfundo),
+                prefixIcon: Icon(Icons.calendar_today,
+                    color: SurayColors.azulMarinoProfundo),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -2230,7 +2336,8 @@ class _BusTableRowState extends State<_BusTableRow> {
         style: TextStyle(
           fontSize: 13,
           fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-          color: bold ? SurayColors.azulMarinoProfundo : SurayColors.grisAntracita,
+          color:
+              bold ? SurayColors.azulMarinoProfundo : SurayColors.grisAntracita,
         ),
       ),
     );
@@ -2343,9 +2450,7 @@ class _BusTableRowState extends State<_BusTableRow> {
         ),
       ),
       child: Text(
-        kilometraje != null
-            ? _formatKilometraje(kilometraje)
-            : 'No registrado',
+        kilometraje != null ? _formatKilometraje(kilometraje) : 'No registrado',
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
