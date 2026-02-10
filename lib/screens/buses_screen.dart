@@ -31,10 +31,6 @@ class _BusesScreenState extends State<BusesScreen>
   int _currentPage = 0;
   int _itemsPerPage = 25;
 
-  // Cache para los buses para evitar rebuilds innecesarios
-  List<Bus>? _cachedBuses;
-  Future<List<Bus>>? _busesFuture;
-
   @override
   void initState() {
     super.initState();
@@ -58,17 +54,9 @@ class _BusesScreenState extends State<BusesScreen>
   }
 
   // --- FETCH & FILTER BUSES ---
-  Future<List<Bus>> _getBusesFiltrados() async {
-    // Solo obtener buses del servidor si el cache está vacío
-    if (_cachedBuses == null) {
-      _cachedBuses = await DataService.getBuses();
-    }
-
-    var buses = List<Bus>.from(_cachedBuses!);
-
+  List<Bus> _ordenarBuses(List<Bus> buses) {
     // Ordenar por patente ascendente
     buses.sort((a, b) => a.patente.compareTo(b.patente));
-
     return buses;
   }
 
@@ -76,9 +64,6 @@ class _BusesScreenState extends State<BusesScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Cachear el Future para evitar recrearlo en cada rebuild
-    _busesFuture ??= _getBusesFiltrados();
-
     return Scaffold(
       backgroundColor: SurayColors.blancoHumo,
       floatingActionButton: FloatingActionButton.extended(
@@ -89,8 +74,8 @@ class _BusesScreenState extends State<BusesScreen>
         foregroundColor: Colors.white,
         elevation: 4,
       ),
-      body: FutureBuilder<List<Bus>>(
-        future: _busesFuture,
+      body: StreamBuilder<List<Bus>>(
+        stream: DataService.getBusesStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return _buildLoadingState();
@@ -99,7 +84,7 @@ class _BusesScreenState extends State<BusesScreen>
             return _buildErrorState(snapshot.error.toString());
           }
 
-          final allBuses = snapshot.data ?? [];
+          final allBuses = _ordenarBuses(snapshot.data ?? []);
           final total = allBuses.length;
           final totalPages = (total / _itemsPerPage).ceil();
           if (_currentPage >= totalPages && totalPages > 0) {
@@ -1259,7 +1244,6 @@ class _BusesScreenState extends State<BusesScreen>
             ),
           );
         }
-        setState(() {});
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1518,9 +1502,6 @@ class _BusesScreenState extends State<BusesScreen>
                         await DataService.updateBus(busActualizado);
 
                         Navigator.pop(ctx);
-                        setState(() {
-                          _cachedBuses = null;
-                        });
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -1675,7 +1656,6 @@ class _BusesScreenState extends State<BusesScreen>
     if (conf == true) {
       try {
         await DataService.deleteBus(id);
-        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Bus eliminado exitosamente'),

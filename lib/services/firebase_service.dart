@@ -96,6 +96,20 @@ class FirebaseService {
   // MÉTODOS PARA BUSES (MANTENER SIN CAMBIOS SIGNIFICATIVOS)
   // =============================================================================
 
+  /// Obtiene buses como Stream - actualización en tiempo real
+  static Stream<List<Bus>> getBusesStream() {
+    return _firestore.collection(_busesCollection).snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return Bus.fromJson(data);
+      }).toList();
+    }).handleError((error) {
+      print('Error en getBusesStream: $error');
+      return <Bus>[];
+    });
+  }
+
   static Future<List<Bus>> getBuses() async {
     try {
       QuerySnapshot snapshot = await _firestore.collection(_busesCollection).get();

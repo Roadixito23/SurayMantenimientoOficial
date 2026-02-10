@@ -153,6 +153,9 @@ class DataService {
   // MÉTODOS PARA BUSES
   // =============================================================================
 
+  /// Obtiene buses como Stream - actualización en tiempo real
+  static Stream<List<Bus>> getBusesStream() => FirebaseService.getBusesStream();
+
   static Future<List<Bus>> getBuses() => FirebaseService.getBuses();
 
   static Future<String> addBus(Bus bus) async {
