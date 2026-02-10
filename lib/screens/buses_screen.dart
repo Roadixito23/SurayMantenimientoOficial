@@ -1188,9 +1188,7 @@ class _BusesScreenState extends State<BusesScreen>
             scale: 0.8 + (0.2 * value),
             child: Opacity(
               opacity: value,
-              child: _MaintenanceConfigDialog(
-                onConfigChanged: () => setState(() {}),
-              ),
+              child: _MaintenanceConfigDialog(),
             ),
           );
         },
@@ -1274,7 +1272,6 @@ class _BusesScreenState extends State<BusesScreen>
               opacity: value,
               child: MantenimientoPreventivoDialog(
                 bus: bus,
-                onMantenimientoRegistrado: () => setState(() {}),
               ),
             ),
           );
@@ -1298,7 +1295,6 @@ class _BusesScreenState extends State<BusesScreen>
               opacity: value,
               child: ActualizarKilometrajeDialog(
                 bus: bus,
-                onKilometrajeActualizado: () => setState(() {}),
               ),
             ),
           );
@@ -1571,7 +1567,6 @@ class _BusesScreenState extends State<BusesScreen>
               opacity: value,
               child: AsignarRepuestoDialog(
                 bus: bus,
-                onRepuestoAsignado: () => setState(() {}),
               ),
             ),
           );
@@ -1860,7 +1855,15 @@ class _BusesScreenState extends State<BusesScreen>
             ),
             SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => setState(() {}),
+              onPressed: () {
+                // El Stream se reconectará automáticamente
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Reconectando...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
               icon: Icon(Icons.refresh),
               label: Text('Reintentar'),
               style: ElevatedButton.styleFrom(
@@ -2012,9 +2015,9 @@ class _HeaderCell {
 
 // Dialog para configurar los intervalos de mantenimiento
 class _MaintenanceConfigDialog extends StatefulWidget {
-  final VoidCallback onConfigChanged;
+  final VoidCallback? onConfigChanged;
 
-  _MaintenanceConfigDialog({required this.onConfigChanged});
+  _MaintenanceConfigDialog({this.onConfigChanged});
 
   @override
   _MaintenanceConfigDialogState createState() =>
@@ -2216,7 +2219,7 @@ class _MaintenanceConfigDialogState extends State<_MaintenanceConfigDialog> {
     MantenimientoConfig.kilometrajeIdeal = km;
     MantenimientoConfig.diasFechaIdeal = dias;
 
-    widget.onConfigChanged();
+    widget.onConfigChanged?.call();
     Navigator.pop(context);
 
     ScaffoldMessenger.of(context).showSnackBar(

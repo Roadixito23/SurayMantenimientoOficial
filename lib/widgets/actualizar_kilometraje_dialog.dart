@@ -6,12 +6,12 @@ import '../main.dart';
 
 class ActualizarKilometrajeDialog extends StatefulWidget {
   final Bus bus;
-  final VoidCallback onKilometrajeActualizado;
+  final VoidCallback? onKilometrajeActualizado;
 
   const ActualizarKilometrajeDialog({
     Key? key,
     required this.bus,
-    required this.onKilometrajeActualizado,
+    this.onKilometrajeActualizado,
   }) : super(key: key);
 
   @override
@@ -80,7 +80,7 @@ class _ActualizarKilometrajeDialogState extends State<ActualizarKilometrajeDialo
           ),
         );
 
-        widget.onKilometrajeActualizado();
+        widget.onKilometrajeActualizado?.call();
         Navigator.pop(context);
       }
     } catch (e) {

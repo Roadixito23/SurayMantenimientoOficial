@@ -16,13 +16,15 @@ class FirebaseService {
   static const String _repuestosAsignadosCollection = 'repuestos_asignados';
   static const String _reportesCollection = 'reportes_diarios';
   static const String _filtrosCollection = 'filtros_repuestos';
-  static const String _tiposMantenimientoCollection = 'tipos_mantenimiento_personalizados'; // ✅ NUEVA COLECCIÓN
+  static const String _tiposMantenimientoCollection =
+      'tipos_mantenimiento_personalizados'; // ✅ NUEVA COLECCIÓN
 
   // =============================================================================
   // ✅ NUEVOS MÉTODOS PARA TIPOS DE MANTENIMIENTO PERSONALIZADOS
   // =============================================================================
 
-  static Future<List<TipoMantenimientoPersonalizado>> getTiposMantenimientoPersonalizados() async {
+  static Future<List<TipoMantenimientoPersonalizado>>
+      getTiposMantenimientoPersonalizados() async {
     try {
       QuerySnapshot snapshot = await _firestore
           .collection(_tiposMantenimientoCollection)
@@ -40,7 +42,8 @@ class FirebaseService {
     }
   }
 
-  static Future<String> addTipoMantenimientoPersonalizado(TipoMantenimientoPersonalizado tipo) async {
+  static Future<String> addTipoMantenimientoPersonalizado(
+      TipoMantenimientoPersonalizado tipo) async {
     try {
       DocumentReference docRef = await _firestore
           .collection(_tiposMantenimientoCollection)
@@ -52,7 +55,8 @@ class FirebaseService {
     }
   }
 
-  static Future<void> updateTipoMantenimientoPersonalizado(TipoMantenimientoPersonalizado tipo) async {
+  static Future<void> updateTipoMantenimientoPersonalizado(
+      TipoMantenimientoPersonalizado tipo) async {
     try {
       await _firestore
           .collection(_tiposMantenimientoCollection)
@@ -66,14 +70,18 @@ class FirebaseService {
 
   static Future<void> deleteTipoMantenimientoPersonalizado(String id) async {
     try {
-      await _firestore.collection(_tiposMantenimientoCollection).doc(id).delete();
+      await _firestore
+          .collection(_tiposMantenimientoCollection)
+          .doc(id)
+          .delete();
     } catch (e) {
       print('Error al eliminar tipo de mantenimiento: $e');
       throw Exception('Error al eliminar el tipo de mantenimiento: $e');
     }
   }
 
-  static Future<TipoMantenimientoPersonalizado?> getTipoMantenimientoPersonalizadoById(String id) async {
+  static Future<TipoMantenimientoPersonalizado?>
+      getTipoMantenimientoPersonalizadoById(String id) async {
     try {
       DocumentSnapshot doc = await _firestore
           .collection(_tiposMantenimientoCollection)
@@ -112,7 +120,8 @@ class FirebaseService {
 
   static Future<List<Bus>> getBuses() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection(_busesCollection).get();
+      QuerySnapshot snapshot =
+          await _firestore.collection(_busesCollection).get();
       return snapshot.docs.map((doc) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
@@ -126,7 +135,8 @@ class FirebaseService {
 
   static Future<String> addBus(Bus bus) async {
     try {
-      DocumentReference docRef = await _firestore.collection(_busesCollection).add(bus.toJson());
+      DocumentReference docRef =
+          await _firestore.collection(_busesCollection).add(bus.toJson());
       return docRef.id;
     } catch (e) {
       print('Error al agregar bus: $e');
@@ -136,7 +146,10 @@ class FirebaseService {
 
   static Future<void> updateBus(Bus bus) async {
     try {
-      await _firestore.collection(_busesCollection).doc(bus.id).update(bus.toJson());
+      await _firestore
+          .collection(_busesCollection)
+          .doc(bus.id)
+          .update(bus.toJson());
     } catch (e) {
       print('Error al actualizar bus: $e');
       throw Exception('Error al actualizar el bus: $e');
@@ -163,7 +176,8 @@ class FirebaseService {
 
   static Future<Bus?> getBusById(String id) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection(_busesCollection).doc(id).get();
+      DocumentSnapshot doc =
+          await _firestore.collection(_busesCollection).doc(id).get();
       if (doc.exists) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
@@ -182,7 +196,8 @@ class FirebaseService {
 
   static Future<List<RepuestoCatalogo>> getCatalogoRepuestos() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection(_repuestosCollection).get();
+      QuerySnapshot snapshot =
+          await _firestore.collection(_repuestosCollection).get();
       return snapshot.docs.map((doc) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
@@ -196,7 +211,9 @@ class FirebaseService {
 
   static Future<String> addRepuestoCatalogo(RepuestoCatalogo repuesto) async {
     try {
-      DocumentReference docRef = await _firestore.collection(_repuestosCollection).add(repuesto.toJson());
+      DocumentReference docRef = await _firestore
+          .collection(_repuestosCollection)
+          .add(repuesto.toJson());
       return docRef.id;
     } catch (e) {
       print('Error al agregar repuesto: $e');
@@ -206,7 +223,10 @@ class FirebaseService {
 
   static Future<void> updateRepuestoCatalogo(RepuestoCatalogo repuesto) async {
     try {
-      await _firestore.collection(_repuestosCollection).doc(repuesto.id).update(repuesto.toJson());
+      await _firestore
+          .collection(_repuestosCollection)
+          .doc(repuesto.id)
+          .update(repuesto.toJson());
     } catch (e) {
       print('Error al actualizar repuesto: $e');
       throw Exception('Error al actualizar el repuesto: $e');
@@ -224,7 +244,8 @@ class FirebaseService {
 
   static Future<RepuestoCatalogo?> getRepuestoCatalogoById(String id) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection(_repuestosCollection).doc(id).get();
+      DocumentSnapshot doc =
+          await _firestore.collection(_repuestosCollection).doc(id).get();
       if (doc.exists) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
@@ -243,7 +264,8 @@ class FirebaseService {
 
   static Future<List<RepuestoAsignado>> getRepuestosAsignados() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection(_repuestosAsignadosCollection).get();
+      QuerySnapshot snapshot =
+          await _firestore.collection(_repuestosAsignadosCollection).get();
       return snapshot.docs.map((doc) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
@@ -257,7 +279,9 @@ class FirebaseService {
 
   static Future<String> addRepuestoAsignado(RepuestoAsignado repuesto) async {
     try {
-      DocumentReference docRef = await _firestore.collection(_repuestosAsignadosCollection).add(repuesto.toJson());
+      DocumentReference docRef = await _firestore
+          .collection(_repuestosAsignadosCollection)
+          .add(repuesto.toJson());
       return docRef.id;
     } catch (e) {
       print('Error al agregar repuesto asignado: $e');
@@ -267,7 +291,10 @@ class FirebaseService {
 
   static Future<void> updateRepuestoAsignado(RepuestoAsignado repuesto) async {
     try {
-      await _firestore.collection(_repuestosAsignadosCollection).doc(repuesto.id).update(repuesto.toJson());
+      await _firestore
+          .collection(_repuestosAsignadosCollection)
+          .doc(repuesto.id)
+          .update(repuesto.toJson());
     } catch (e) {
       print('Error al actualizar repuesto asignado: $e');
       throw Exception('Error al actualizar el repuesto asignado: $e');
@@ -276,14 +303,18 @@ class FirebaseService {
 
   static Future<void> deleteRepuestoAsignado(String id) async {
     try {
-      await _firestore.collection(_repuestosAsignadosCollection).doc(id).delete();
+      await _firestore
+          .collection(_repuestosAsignadosCollection)
+          .doc(id)
+          .delete();
     } catch (e) {
       print('Error al eliminar repuesto asignado: $e');
       throw Exception('Error al eliminar el repuesto asignado: $e');
     }
   }
 
-  static Future<List<RepuestoAsignado>> getRepuestosAsignadosPorBus(String busId) async {
+  static Future<List<RepuestoAsignado>> getRepuestosAsignadosPorBus(
+      String busId) async {
     try {
       QuerySnapshot snapshot = await _firestore
           .collection(_repuestosAsignadosCollection)
@@ -323,7 +354,9 @@ class FirebaseService {
 
   static Future<String> addReporte(ReporteDiario reporte) async {
     try {
-      DocumentReference docRef = await _firestore.collection(_reportesCollection).add(reporte.toJson());
+      DocumentReference docRef = await _firestore
+          .collection(_reportesCollection)
+          .add(reporte.toJson());
       return docRef.id;
     } catch (e) {
       print('Error al agregar reporte: $e');
@@ -333,7 +366,10 @@ class FirebaseService {
 
   static Future<void> updateReporte(ReporteDiario reporte) async {
     try {
-      await _firestore.collection(_reportesCollection).doc(reporte.id).update(reporte.toJson());
+      await _firestore
+          .collection(_reportesCollection)
+          .doc(reporte.id)
+          .update(reporte.toJson());
     } catch (e) {
       print('Error al actualizar reporte: $e');
       throw Exception('Error al actualizar el reporte: $e');
@@ -351,7 +387,8 @@ class FirebaseService {
 
   static Future<ReporteDiario?> getReporteById(String id) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection(_reportesCollection).doc(id).get();
+      DocumentSnapshot doc =
+          await _firestore.collection(_reportesCollection).doc(id).get();
       if (doc.exists) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
@@ -367,7 +404,8 @@ class FirebaseService {
   static Future<List<ReporteDiario>> getReportesPorFecha(DateTime fecha) async {
     try {
       DateTime startOfDay = DateTime(fecha.year, fecha.month, fecha.day);
-      DateTime endOfDay = DateTime(fecha.year, fecha.month, fecha.day, 23, 59, 59);
+      DateTime endOfDay =
+          DateTime(fecha.year, fecha.month, fecha.day, 23, 59, 59);
 
       QuerySnapshot snapshot = await _firestore
           .collection(_reportesCollection)
@@ -392,7 +430,8 @@ class FirebaseService {
 
   static Future<List<FiltroRepuesto>> getFiltrosRepuestos() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection(_filtrosCollection).get();
+      QuerySnapshot snapshot =
+          await _firestore.collection(_filtrosCollection).get();
       return snapshot.docs.map((doc) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
@@ -406,7 +445,8 @@ class FirebaseService {
 
   static Future<String> addFiltroRepuesto(FiltroRepuesto filtro) async {
     try {
-      DocumentReference docRef = await _firestore.collection(_filtrosCollection).add(filtro.toJson());
+      DocumentReference docRef =
+          await _firestore.collection(_filtrosCollection).add(filtro.toJson());
       return docRef.id;
     } catch (e) {
       print('Error al agregar filtro: $e');
@@ -416,7 +456,10 @@ class FirebaseService {
 
   static Future<void> updateFiltroRepuesto(FiltroRepuesto filtro) async {
     try {
-      await _firestore.collection(_filtrosCollection).doc(filtro.id).update(filtro.toJson());
+      await _firestore
+          .collection(_filtrosCollection)
+          .doc(filtro.id)
+          .update(filtro.toJson());
     } catch (e) {
       print('Error al actualizar filtro: $e');
       throw Exception('Error al actualizar el filtro: $e');
@@ -439,7 +482,8 @@ class FirebaseService {
   static Future<void> initializeSampleData() async {
     try {
       // Verificar si ya hay datos
-      QuerySnapshot busesSnapshot = await _firestore.collection(_busesCollection).limit(1).get();
+      QuerySnapshot busesSnapshot =
+          await _firestore.collection(_busesCollection).limit(1).get();
       if (busesSnapshot.docs.isNotEmpty) {
         print('Los datos de ejemplo ya existen');
         return;
@@ -471,21 +515,26 @@ class FirebaseService {
 
 // ✅ NUEVO MÉTODO: Inicializar tipos de mantenimiento personalizados con filtros críticos
   static Future<void> _initializeTiposMantenimientoPersonalizados() async {
-    final tiposPredeterminados = TipoMantenimientoPersonalizado.tiposPredeterminados;
+    final tiposPredeterminados =
+        TipoMantenimientoPersonalizado.tiposPredeterminados;
 
     for (final tipo in tiposPredeterminados) {
-      await _firestore.collection(_tiposMantenimientoCollection).doc(tipo.id).set(tipo.toJson());
+      await _firestore
+          .collection(_tiposMantenimientoCollection)
+          .doc(tipo.id)
+          .set(tipo.toJson());
     }
 
-    print('Tipos de mantenimiento personalizados inicializados: ${tiposPredeterminados.length}');
+    print(
+        'Tipos de mantenimiento personalizados inicializados: ${tiposPredeterminados.length}');
 
     // ✅ NUEVO: Contar y reportar filtros críticos
-    final filtrosCriticos = tiposPredeterminados.where((t) => t.esFiltroCritico).length;
-    print('Filtros críticos configurados para alertas de kilometraje: $filtrosCriticos');
+    final filtrosCriticos =
+        tiposPredeterminados.where((t) => t.esFiltroCritico).length;
+    print(
+        'Filtros críticos configurados para alertas de kilometraje: $filtrosCriticos');
     print('Umbral configurado: 5000 km/mes');
   }
-
-
 
   static Future<void> _initializeFiltrosPredeterminados() async {
     final filtros = [
@@ -493,7 +542,14 @@ class FirebaseService {
         id: 'filtro_agua',
         nombre: 'Agua',
         descripcion: 'Filtros y componentes relacionados con agua',
-        palabrasClave: ['agua', 'water', 'líquido', 'bomba agua', 'radiador', 'refrigerante'],
+        palabrasClave: [
+          'agua',
+          'water',
+          'líquido',
+          'bomba agua',
+          'radiador',
+          'refrigerante'
+        ],
         color: Color(0xFF2196F3),
         icono: Icons.water_drop,
         esPredeterminado: true,
@@ -502,7 +558,13 @@ class FirebaseService {
         id: 'filtro_aceite',
         nombre: 'Aceite',
         descripcion: 'Filtros y componentes relacionados con aceite',
-        palabrasClave: ['aceite', 'oil', 'lubricante', 'filtro aceite', 'bomba aceite'],
+        palabrasClave: [
+          'aceite',
+          'oil',
+          'lubricante',
+          'filtro aceite',
+          'bomba aceite'
+        ],
         color: Color(0xFFFF9800),
         icono: Icons.opacity,
         esPredeterminado: true,
@@ -511,7 +573,13 @@ class FirebaseService {
         id: 'filtro_aire',
         nombre: 'Aire',
         descripcion: 'Filtros y componentes relacionados con aire',
-        palabrasClave: ['aire', 'air', 'filtro aire', 'compresor', 'válvula aire'],
+        palabrasClave: [
+          'aire',
+          'air',
+          'filtro aire',
+          'compresor',
+          'válvula aire'
+        ],
         color: Color(0xFF9E9E9E),
         icono: Icons.air,
         esPredeterminado: true,
@@ -519,7 +587,10 @@ class FirebaseService {
     ];
 
     for (final filtro in filtros) {
-      await _firestore.collection(_filtrosCollection).doc(filtro.id).set(filtro.toJson());
+      await _firestore
+          .collection(_filtrosCollection)
+          .doc(filtro.id)
+          .set(filtro.toJson());
     }
   }
 
@@ -700,7 +771,10 @@ class FirebaseService {
     ];
 
     for (final bus in buses) {
-      await _firestore.collection(_busesCollection).doc(bus.id).set(bus.toJson());
+      await _firestore
+          .collection(_busesCollection)
+          .doc(bus.id)
+          .set(bus.toJson());
     }
   }
 
@@ -710,136 +784,160 @@ class FirebaseService {
         id: 'rep_1',
         nombre: 'Filtro de Aceite Motor',
         codigo: 'FLT-ACE-001',
-        descripcion: 'Filtro de aceite para motor diésel. Compatible con diversos modelos de buses urbanos.',
+        descripcion:
+            'Filtro de aceite para motor diésel. Compatible con diversos modelos de buses urbanos.',
         sistema: SistemaVehiculo.motor,
         tipo: TipoRepuesto.original,
         fabricante: 'Mann Filter',
         numeroOEM: 'W950/26',
         precioReferencial: 25000,
-        observaciones: 'Cambiar cada 15,000 km. Verificar compatibilidad antes de instalación.',
+        observaciones:
+            'Cambiar cada 15,000 km. Verificar compatibilidad antes de instalación.',
         fechaActualizacion: DateTime.now(),
       ),
       RepuestoCatalogo(
         id: 'rep_2',
         nombre: 'Filtro de Aire Motor',
         codigo: 'FLT-AIR-001',
-        descripcion: 'Filtro de aire principal para sistema de admisión. Alta eficiencia de filtrado.',
+        descripcion:
+            'Filtro de aire principal para sistema de admisión. Alta eficiencia de filtrado.',
         sistema: SistemaVehiculo.motor,
         tipo: TipoRepuesto.alternativo,
         fabricante: 'Donaldson',
         numeroOEM: 'P776695',
         precioReferencial: 45000,
-        observaciones: 'Inspeccionar cada 10,000 km. Cambiar cuando esté sucio o cada 30,000 km.',
+        observaciones:
+            'Inspeccionar cada 10,000 km. Cambiar cuando esté sucio o cada 30,000 km.',
         fechaActualizacion: DateTime.now(),
       ),
       RepuestoCatalogo(
         id: 'rep_3',
         nombre: 'Pastillas de Freno Delanteras',
         codigo: 'FRN-PAS-001',
-        descripcion: 'Juego completo de pastillas de freno para eje delantero. Material libre de asbesto.',
+        descripcion:
+            'Juego completo de pastillas de freno para eje delantero. Material libre de asbesto.',
         sistema: SistemaVehiculo.frenos,
         tipo: TipoRepuesto.original,
         fabricante: 'Brembo',
         numeroOEM: 'P06033',
         precioReferencial: 120000,
-        observaciones: 'Verificar grosor mínimo 3mm. Cambiar en conjunto con discos si es necesario.',
+        observaciones:
+            'Verificar grosor mínimo 3mm. Cambiar en conjunto con discos si es necesario.',
         fechaActualizacion: DateTime.now(),
       ),
       RepuestoCatalogo(
         id: 'rep_4',
         nombre: 'Filtro de Combustible',
         codigo: 'FLT-CMB-001',
-        descripcion: 'Filtro separador de agua para sistema de combustible diésel. Previene contaminación.',
+        descripcion:
+            'Filtro separador de agua para sistema de combustible diésel. Previene contaminación.',
         sistema: SistemaVehiculo.combustible,
         tipo: TipoRepuesto.generico,
         fabricante: 'Parker Racor',
         precioReferencial: 35000,
-        observaciones: 'Drenar agua semanalmente. Cambiar filtro cada 20,000 km o cuando se obstruya.',
+        observaciones:
+            'Drenar agua semanalmente. Cambiar filtro cada 20,000 km o cuando se obstruya.',
         fechaActualizacion: DateTime.now(),
       ),
       RepuestoCatalogo(
         id: 'rep_5',
         nombre: 'Amortiguador Delantero',
         codigo: 'SUS-AMO-001',
-        descripcion: 'Amortiguador telescópico para eje delantero. Mejora estabilidad y confort.',
+        descripcion:
+            'Amortiguador telescópico para eje delantero. Mejora estabilidad y confort.',
         sistema: SistemaVehiculo.suspension,
         tipo: TipoRepuesto.original,
         fabricante: 'Monroe',
         numeroOEM: 'G7377',
         precioReferencial: 180000,
-        observaciones: 'Cambiar en pares. Verificar bujes y soportes al mismo tiempo.',
+        observaciones:
+            'Cambiar en pares. Verificar bujes y soportes al mismo tiempo.',
         fechaActualizacion: DateTime.now(),
       ),
       RepuestoCatalogo(
         id: 'rep_6',
         nombre: 'Correa del Alternador',
         codigo: 'ELE-COR-001',
-        descripcion: 'Correa trapezoidal para accionamiento del alternador. Material reforzado.',
+        descripcion:
+            'Correa trapezoidal para accionamiento del alternador. Material reforzado.',
         sistema: SistemaVehiculo.electrico,
         tipo: TipoRepuesto.alternativo,
         fabricante: 'Gates',
         numeroOEM: '6PK1720',
         precioReferencial: 35000,
-        observaciones: 'Verificar tensión regularmente. Cambiar cada 60,000 km o si presenta grietas.',
+        observaciones:
+            'Verificar tensión regularmente. Cambiar cada 60,000 km o si presenta grietas.',
         fechaActualizacion: DateTime.now(),
       ),
       RepuestoCatalogo(
         id: 'rep_7',
         nombre: 'Neumático 275/70R22.5',
         codigo: 'NEU-DIR-001',
-        descripcion: 'Neumático direccional para eje delantero. Compuesto especial para buses urbanos.',
+        descripcion:
+            'Neumático direccional para eje delantero. Compuesto especial para buses urbanos.',
         sistema: SistemaVehiculo.neumaticos,
         tipo: TipoRepuesto.original,
         fabricante: 'Michelin',
         numeroOEM: 'X MULTIWAY 3D',
         precioReferencial: 350000,
-        observaciones: 'Rotar cada 20,000 km. Verificar presión semanalmente (120 PSI).',
+        observaciones:
+            'Rotar cada 20,000 km. Verificar presión semanalmente (120 PSI).',
         fechaActualizacion: DateTime.now(),
       ),
       RepuestoCatalogo(
         id: 'rep_8',
         nombre: 'Bomba de Agua',
         codigo: 'REF-BOM-001',
-        descripcion: 'Bomba centrífuga para sistema de refrigeración. Incluye junta y tornillería.',
+        descripcion:
+            'Bomba centrífuga para sistema de refrigeración. Incluye junta y tornillería.',
         sistema: SistemaVehiculo.refrigeracion,
         tipo: TipoRepuesto.original,
         fabricante: 'Febi Bilstein',
         numeroOEM: '01262',
         precioReferencial: 185000,
-        observaciones: 'Cambiar líquido refrigerante al mismo tiempo. Verificar termostato.',
+        observaciones:
+            'Cambiar líquido refrigerante al mismo tiempo. Verificar termostato.',
         fechaActualizacion: DateTime.now(),
       ),
     ];
 
     for (final repuesto in repuestos) {
-      await _firestore.collection(_repuestosCollection).doc(repuesto.id).set(repuesto.toJson());
+      await _firestore
+          .collection(_repuestosCollection)
+          .doc(repuesto.id)
+          .set(repuesto.toJson());
     }
   }
-
-
 
   static Future<void> _initializeSampleReportes() async {
     final reportes = [
       ReporteDiario(
         id: 'rep_1',
         fecha: DateTime.now().subtract(Duration(days: 1)),
-        numeroReporte: '001/${DateTime.now().subtract(Duration(days: 1)).day.toString().padLeft(2, '0')}/${DateTime.now().subtract(Duration(days: 1)).month.toString().padLeft(2, '0')}/${DateTime.now().subtract(Duration(days: 1)).year.toString().substring(2)}',
-        observaciones: 'Mantenimiento preventivo realizado en buses de la flota. Se cambió aceite de motor y filtros en AB-CD-12. Revisión general de sistemas de frenos y suspensión en EF-GH-34.',
+        numeroReporte:
+            '001/${DateTime.now().subtract(Duration(days: 1)).day.toString().padLeft(2, '0')}/${DateTime.now().subtract(Duration(days: 1)).month.toString().padLeft(2, '0')}/${DateTime.now().subtract(Duration(days: 1)).year.toString().substring(2)}',
+        observaciones:
+            'Mantenimiento preventivo realizado en buses de la flota. Se cambió aceite de motor y filtros en AB-CD-12. Revisión general de sistemas de frenos y suspensión en EF-GH-34.',
         busesAtendidos: ['AB-CD-12', 'EF-GH-34'],
         autor: 'Juan Pérez',
       ),
       ReporteDiario(
         id: 'rep_2',
         fecha: DateTime.now(),
-        numeroReporte: '001/${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year.toString().substring(2)}',
-        observaciones: 'Inspección rutinaria de flota completa. Se realizó diagnóstico con scanner en todos los vehículos. Resto de la flota sin novedades.',
+        numeroReporte:
+            '001/${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year.toString().substring(2)}',
+        observaciones:
+            'Inspección rutinaria de flota completa. Se realizó diagnóstico con scanner en todos los vehículos. Resto de la flota sin novedades.',
         busesAtendidos: ['AB-CD-12', 'EF-GH-34', 'IJ-KL-56'],
         autor: 'María González',
       ),
     ];
 
     for (final reporte in reportes) {
-      await _firestore.collection(_reportesCollection).doc(reporte.id).set(reporte.toJson());
+      await _firestore
+          .collection(_reportesCollection)
+          .doc(reporte.id)
+          .set(reporte.toJson());
     }
   }
 }

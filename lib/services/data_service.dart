@@ -20,12 +20,12 @@ class MantenimientoConfig {
 
   static DateTime calcularFechaIdeal(Bus bus) {
     if (bus.ultimoMantenimiento != null) {
-      return bus.ultimoMantenimiento!.fechaUltimoCambio.add(Duration(days: diasFechaIdeal));
+      return bus.ultimoMantenimiento!.fechaUltimoCambio
+          .add(Duration(days: diasFechaIdeal));
     }
     return DateTime.now().add(Duration(days: diasFechaIdeal));
   }
 }
-
 
 class DataService {
   // =============================================================================
@@ -66,11 +66,13 @@ class DataService {
   // =============================================================================
 
   /// Obtiene todos los tipos de mantenimiento personalizados
-  static Future<List<TipoMantenimientoPersonalizado>> getTiposMantenimientoPersonalizados() =>
-      FirebaseService.getTiposMantenimientoPersonalizados();
+  static Future<List<TipoMantenimientoPersonalizado>>
+      getTiposMantenimientoPersonalizados() =>
+          FirebaseService.getTiposMantenimientoPersonalizados();
 
   /// Obtiene tipos activos ordenados por frecuencia de uso
-  static Future<List<TipoMantenimientoPersonalizado>> getTiposMantenimientoActivos() async {
+  static Future<List<TipoMantenimientoPersonalizado>>
+      getTiposMantenimientoActivos() async {
     final tipos = await getTiposMantenimientoPersonalizados();
     final activos = tipos.where((t) => t.activo).toList();
 
@@ -81,30 +83,35 @@ class DataService {
   }
 
   /// Obtiene tipos por categoría base
-  static Future<List<TipoMantenimientoPersonalizado>> getTiposPorCategoria(TipoMantenimiento categoria) async {
+  static Future<List<TipoMantenimientoPersonalizado>> getTiposPorCategoria(
+      TipoMantenimiento categoria) async {
     final tipos = await getTiposMantenimientoActivos();
     return tipos.where((t) => t.tipoBase == categoria).toList();
   }
 
   /// Busca tipos por título (para autocompletado)
-  static Future<List<TipoMantenimientoPersonalizado>> buscarTiposPorTitulo(String query) async {
+  static Future<List<TipoMantenimientoPersonalizado>> buscarTiposPorTitulo(
+      String query) async {
     if (query.isEmpty) return [];
 
     final tipos = await getTiposMantenimientoActivos();
     final queryLower = query.toLowerCase();
 
-    return tipos.where((t) =>
-    t.titulo.toLowerCase().contains(queryLower) ||
-        (t.descripcion?.toLowerCase().contains(queryLower) ?? false)
-    ).toList();
+    return tipos
+        .where((t) =>
+            t.titulo.toLowerCase().contains(queryLower) ||
+            (t.descripcion?.toLowerCase().contains(queryLower) ?? false))
+        .toList();
   }
 
   /// Agrega un nuevo tipo personalizado
-  static Future<String> addTipoMantenimientoPersonalizado(TipoMantenimientoPersonalizado tipo) =>
+  static Future<String> addTipoMantenimientoPersonalizado(
+          TipoMantenimientoPersonalizado tipo) =>
       FirebaseService.addTipoMantenimientoPersonalizado(tipo);
 
   /// Actualiza un tipo existente
-  static Future<void> updateTipoMantenimientoPersonalizado(TipoMantenimientoPersonalizado tipo) =>
+  static Future<void> updateTipoMantenimientoPersonalizado(
+          TipoMantenimientoPersonalizado tipo) =>
       FirebaseService.updateTipoMantenimientoPersonalizado(tipo);
 
   /// Incrementa el contador de uso de un tipo
@@ -126,7 +133,9 @@ class DataService {
 
     try {
       final tipoExistente = tiposExistentes.firstWhere(
-            (t) => t.titulo.toLowerCase() == titulo.toLowerCase() && t.tipoBase == tipoBase,
+        (t) =>
+            t.titulo.toLowerCase() == titulo.toLowerCase() &&
+            t.tipoBase == tipoBase,
       );
 
       // Si existe, incrementar uso y retornar
@@ -173,7 +182,8 @@ class DataService {
         promedioKmMensuales: 2000.0, // Valor por defecto
         ultimaActualizacionKm: DateTime.now(),
         // ✅ Asignar kilometraje ideal inicial al crear un bus
-        kilometrajeIdeal: (bus.kilometraje ?? 0) + MantenimientoConfig.kilometrajeIdeal,
+        kilometrajeIdeal:
+            (bus.kilometraje ?? 0) + MantenimientoConfig.kilometrajeIdeal,
       );
     }
 
@@ -193,7 +203,8 @@ class DataService {
       // Esto preserva el 'kilometrajeIdeal' si no fue proporcionado en el formulario de actualización,
       // evitando que se borre accidentalmente.
       final busToSave = updatedBus.copyWith(
-        kilometrajeIdeal: updatedBus.kilometrajeIdeal ?? originalBus.kilometrajeIdeal,
+        kilometrajeIdeal:
+            updatedBus.kilometrajeIdeal ?? originalBus.kilometrajeIdeal,
       );
       await FirebaseService.updateBus(busToSave);
     } else {
@@ -211,7 +222,8 @@ class DataService {
   // =============================================================================
 
   /// Actualiza el kilometraje de un bus y recalcula el promedio mensual
-  static Future<void> actualizarKilometraje(String busId, double nuevoKilometraje) async {
+  static Future<void> actualizarKilometraje(
+      String busId, double nuevoKilometraje) async {
     final bus = await getBusById(busId);
     if (bus == null) return;
 
@@ -264,8 +276,7 @@ class DataService {
     MantenimientoPreventivo mantenimientoActualizado;
     if (bus.mantenimientoPreventivo != null) {
       final nuevosRegistros = List<RegistroMantenimiento>.from(
-          bus.mantenimientoPreventivo!.historialMantenimientos
-      );
+          bus.mantenimientoPreventivo!.historialMantenimientos);
       nuevosRegistros.add(nuevoRegistro);
       mantenimientoActualizado = bus.mantenimientoPreventivo!.copyWith(
         historialMantenimientos: nuevosRegistros,
@@ -282,7 +293,8 @@ class DataService {
     // --- SE ELIMINÓ LA CREACIÓN DEL OBJETO 'Mantencion' ANTIGUO ---
     // Ya no se crea una entrada duplicada en historialMantenciones.
 
-    final nuevoKmIdeal = kilometrajeActual + MantenimientoConfig.kilometrajeIdeal;
+    final nuevoKmIdeal =
+        kilometrajeActual + MantenimientoConfig.kilometrajeIdeal;
 
     final busActualizado = bus.copyWith(
       kilometraje: kilometrajeActual,
@@ -294,7 +306,8 @@ class DataService {
     );
 
     await updateBus(busActualizado);
-    print('✅ Mantenimiento registrado (sin duplicados) y kilometraje ideal actualizado para el bus $busId');
+    print(
+        '✅ Mantenimiento registrado (sin duplicados) y kilometraje ideal actualizado para el bus $busId');
   }
 
   /// ✅ CORREGIDO: Registra un mantenimiento preventivo SIN DUPLICAR
@@ -327,8 +340,7 @@ class DataService {
     MantenimientoPreventivo mantenimientoActualizado;
     if (bus.mantenimientoPreventivo != null) {
       final nuevosRegistros = List<RegistroMantenimiento>.from(
-          bus.mantenimientoPreventivo!.historialMantenimientos
-      );
+          bus.mantenimientoPreventivo!.historialMantenimientos);
       nuevosRegistros.add(nuevoRegistro);
 
       mantenimientoActualizado = bus.mantenimientoPreventivo!.copyWith(
@@ -346,7 +358,8 @@ class DataService {
     // --- SE ELIMINÓ LA CREACIÓN DEL OBJETO 'Mantencion' ANTIGUO ---
     // Ya no se crea una entrada duplicada en historialMantenciones.
 
-    final nuevoKmIdeal = kilometrajeActual + MantenimientoConfig.kilometrajeIdeal;
+    final nuevoKmIdeal =
+        kilometrajeActual + MantenimientoConfig.kilometrajeIdeal;
 
     final busActualizado = bus.copyWith(
       kilometraje: kilometrajeActual,
@@ -358,7 +371,8 @@ class DataService {
     );
 
     await updateBus(busActualizado);
-    print('✅ Mantenimiento preventivo registrado (sin duplicados) y kilometraje ideal actualizado para el bus $busId');
+    print(
+        '✅ Mantenimiento preventivo registrado (sin duplicados) y kilometraje ideal actualizado para el bus $busId');
   }
 
   static String _getDescripcionMantenimiento(TipoFiltro tipoFiltro) {
@@ -412,23 +426,22 @@ class DataService {
   }
 
   // Resto de métodos sin cambios significativos...
-  static Future<List<ReporteDiario>> getReportesPorBus(String busPatente) async {
+  static Future<List<ReporteDiario>> getReportesPorBus(
+      String busPatente) async {
     final todosLosReportes = await getReportes();
-    return todosLosReportes.where((reporte) =>
-        reporte.busesAtendidos.contains(busPatente)
-    ).toList();
+    return todosLosReportes
+        .where((reporte) => reporte.busesAtendidos.contains(busPatente))
+        .toList();
   }
 
   static Future<List<ReporteDiario>> getReportesPorBusYTipo(
-      String busPatente,
-      String? tipoFiltro
-      ) async {
+      String busPatente, String? tipoFiltro) async {
     var reportes = await getReportesPorBus(busPatente);
 
     if (tipoFiltro != null && tipoFiltro != 'Todos') {
-      reportes = reportes.where((reporte) =>
-      reporte.tipoTrabajoDisplay == tipoFiltro
-      ).toList();
+      reportes = reportes
+          .where((reporte) => reporte.tipoTrabajoDisplay == tipoFiltro)
+          .toList();
     }
 
     return reportes;
@@ -437,18 +450,18 @@ class DataService {
   /// Obtiene todos los buses que requieren mantenimiento crítico
   static Future<List<Bus>> getBusesConMantenimientoCritico() async {
     final buses = await getBuses();
-    return buses.where((bus) =>
-    bus.tieneMantenimientosVencidos || bus.tieneMantenimientosUrgentes
-    ).toList();
+    return buses
+        .where((bus) =>
+            bus.tieneMantenimientosVencidos || bus.tieneMantenimientosUrgentes)
+        .toList();
   }
 
   /// Obtiene todos los buses que requieren mantenimiento en los próximos días
   static Future<List<Bus>> getBusesConMantenimientoProximo(int dias) async {
     final buses = await getBuses();
     return buses.where((bus) {
-      return bus.estadosMantenimiento.any((estado) =>
-      estado.diasRestantes <= dias && estado.diasRestantes > 0
-      );
+      return bus.estadosMantenimiento.any(
+          (estado) => estado.diasRestantes <= dias && estado.diasRestantes > 0);
     }).toList();
   }
 
@@ -490,7 +503,10 @@ class DataService {
       'filtrosUrgentesPorTipo': filtrosUrgentesPorTipo,
       'totalBuses': buses.length,
       'porcentajeBusesConAlertas': buses.isNotEmpty
-          ? ((busesConMantenimientoCritico + busesConMantenimientoUrgente) / buses.length * 100).round()
+          ? ((busesConMantenimientoCritico + busesConMantenimientoUrgente) /
+                  buses.length *
+                  100)
+              .round()
           : 0,
     };
   }
@@ -513,8 +529,9 @@ class DataService {
 
       for (final codigo in codigosPredeterminados) {
         final repuesto = catalogoRepuestos.firstWhere(
-              (r) => r.codigo == codigo,
-          orElse: () => throw Exception('Repuesto predeterminado $codigo no encontrado'),
+          (r) => r.codigo == codigo,
+          orElse: () =>
+              throw Exception('Repuesto predeterminado $codigo no encontrado'),
         );
 
         final repuestoAsignado = RepuestoAsignado(
@@ -575,7 +592,8 @@ class DataService {
   static Future<String> addRepuestoCatalogo(RepuestoCatalogo repuesto) =>
       FirebaseService.addRepuestoCatalogo(repuesto);
 
-  static Future<void> updateRepuestoCatalogo(RepuestoCatalogo updatedRepuesto) =>
+  static Future<void> updateRepuestoCatalogo(
+          RepuestoCatalogo updatedRepuesto) =>
       FirebaseService.updateRepuestoCatalogo(updatedRepuesto);
 
   static Future<void> deleteRepuestoCatalogo(String id) =>
@@ -594,22 +612,25 @@ class DataService {
   static Future<String> addRepuestoAsignado(RepuestoAsignado repuesto) =>
       FirebaseService.addRepuestoAsignado(repuesto);
 
-  static Future<void> updateRepuestoAsignado(RepuestoAsignado updatedRepuesto) =>
+  static Future<void> updateRepuestoAsignado(
+          RepuestoAsignado updatedRepuesto) =>
       FirebaseService.updateRepuestoAsignado(updatedRepuesto);
 
   static Future<void> deleteRepuestoAsignado(String id) =>
       FirebaseService.deleteRepuestoAsignado(id);
 
-  static Future<List<RepuestoAsignado>> getRepuestosAsignadosPorBus(String busId) =>
+  static Future<List<RepuestoAsignado>> getRepuestosAsignadosPorBus(
+          String busId) =>
       FirebaseService.getRepuestosAsignadosPorBus(busId);
 
-  static Future<List<Map<String, dynamic>>> getRepuestosAsignadosConInfo(String busId) async {
+  static Future<List<Map<String, dynamic>>> getRepuestosAsignadosConInfo(
+      String busId) async {
     final repuestosAsignados = await getRepuestosAsignadosPorBus(busId);
     final catalogoRepuestos = await getCatalogoRepuestos();
 
     return repuestosAsignados.map((repuestoAsignado) {
       final repuestoCatalogo = catalogoRepuestos.firstWhere(
-            (r) => r.id == repuestoAsignado.repuestoCatalogoId,
+        (r) => r.id == repuestoAsignado.repuestoCatalogoId,
         orElse: () => RepuestoCatalogo(
           id: 'not_found',
           nombre: 'Repuesto no encontrado',
@@ -632,12 +653,18 @@ class DataService {
   // MÉTODOS PARA REPORTES (SIN CAMBIOS)
   // =============================================================================
 
-  static Future<List<ReporteDiario>> getReportes() => FirebaseService.getReportes();
-  static Future<String> addReporte(ReporteDiario reporte) => FirebaseService.addReporte(reporte);
-  static Future<void> updateReporte(ReporteDiario updatedReporte) => FirebaseService.updateReporte(updatedReporte);
-  static Future<void> deleteReporte(String id) => FirebaseService.deleteReporte(id);
-  static Future<ReporteDiario?> getReporteById(String id) => FirebaseService.getReporteById(id);
-  static Future<List<ReporteDiario>> getReportesPorFecha(DateTime fecha) => FirebaseService.getReportesPorFecha(fecha);
+  static Future<List<ReporteDiario>> getReportes() =>
+      FirebaseService.getReportes();
+  static Future<String> addReporte(ReporteDiario reporte) =>
+      FirebaseService.addReporte(reporte);
+  static Future<void> updateReporte(ReporteDiario updatedReporte) =>
+      FirebaseService.updateReporte(updatedReporte);
+  static Future<void> deleteReporte(String id) =>
+      FirebaseService.deleteReporte(id);
+  static Future<ReporteDiario?> getReporteById(String id) =>
+      FirebaseService.getReporteById(id);
+  static Future<List<ReporteDiario>> getReportesPorFecha(DateTime fecha) =>
+      FirebaseService.getReportesPorFecha(fecha);
 
   static Future<String> generarNumeroReporte(DateTime fecha) async {
     final reportesDelDia = await getReportesPorFecha(fecha);
@@ -662,8 +689,10 @@ class DataService {
 
     final reportes = await getReportes();
     final reportesHoy = (await getReportesPorFecha(ahora)).length;
-    final reportesSemana = reportes.where((r) => r.fecha.isAfter(inicioSemana)).length;
-    final reportesMes = reportes.where((r) => r.fecha.isAfter(inicioMes)).length;
+    final reportesSemana =
+        reportes.where((r) => r.fecha.isAfter(inicioSemana)).length;
+    final reportesMes =
+        reportes.where((r) => r.fecha.isAfter(inicioMes)).length;
 
     final busesAtendidosMes = <String>{};
     for (final reporte in reportes.where((r) => r.fecha.isAfter(inicioMes))) {
@@ -689,12 +718,16 @@ class DataService {
     final catalogoRepuestos = await getCatalogoRepuestos();
     final repuestosAsignados = await getRepuestosAsignados();
     final busesRevisionVencida = await getBusesRevisionTecnicaVencida();
-    final busesRevisionProximaVencer = await getBusesRevisionTecnicaProximaVencer();
+    final busesRevisionProximaVencer =
+        await getBusesRevisionTecnicaProximaVencer();
     final busesMantenimientoCritico = await getBusesConMantenimientoCritico();
 
-    final disponibles = buses.where((b) => b.estado == EstadoBus.disponible).length;
-    final enReparacion = buses.where((b) => b.estado == EstadoBus.enReparacion).length;
-    final fueraServicio = buses.where((b) => b.estado == EstadoBus.fueraDeServicio).length;
+    final disponibles =
+        buses.where((b) => b.estado == EstadoBus.disponible).length;
+    final enReparacion =
+        buses.where((b) => b.estado == EstadoBus.enReparacion).length;
+    final fueraServicio =
+        buses.where((b) => b.estado == EstadoBus.fueraDeServicio).length;
 
     return {
       'total': buses.length,
@@ -754,7 +787,8 @@ class DataService {
   static Future<String> exportBusesToCSV() async {
     final buses = await getBuses();
     final buffer = StringBuffer();
-    buffer.writeln('Patente,Identificador,Marca,Modelo,Anio,Estado,Ubicacion,Kilometraje,RevisionTecnica,TipoMotor');
+    buffer.writeln(
+        'Patente,Identificador,Marca,Modelo,Anio,Estado,Ubicacion,Kilometraje,RevisionTecnica,TipoMotor');
 
     for (final bus in buses) {
       buffer.writeln([
@@ -767,7 +801,8 @@ class DataService {
         bus.ubicacionActual ?? '',
         bus.kilometraje ?? '',
         bus.fechaRevisionTecnica?.toIso8601String() ?? '',
-        bus.mantenimientoPreventivo?.tipoMotor.toString().split('.').last ?? 'diesel',
+        bus.mantenimientoPreventivo?.tipoMotor.toString().split('.').last ??
+            'diesel',
       ].join(','));
     }
 
@@ -785,10 +820,13 @@ class DataService {
           final bus = Bus(
             id: '',
             patente: row[0].trim(),
-            identificador: row.length > 1 && row[1].trim().isNotEmpty ? row[1].trim() : null,
+            identificador: row.length > 1 && row[1].trim().isNotEmpty
+                ? row[1].trim()
+                : null,
             marca: row.length > 2 ? row[2].trim() : '',
             modelo: row.length > 3 ? row[3].trim() : '',
-            anio: row.length > 4 ? int.parse(row[4].trim()) : DateTime.now().year,
+            anio:
+                row.length > 4 ? int.parse(row[4].trim()) : DateTime.now().year,
             estado: EstadoBus.disponible,
             fechaRegistro: DateTime.now(),
             ubicacionActual: row.length > 6 ? row[6].trim() : null,
@@ -805,34 +843,43 @@ class DataService {
   // ✅ NUEVOS MÉTODOS para manejar filtros críticos y alertas de kilometraje
 
   /// Verifica si un bus tiene filtros críticos que requieren mantenimiento basado en kilometraje
-  static Future<List<Map<String, dynamic>>> verificarAlertasFiltrosCriticos(String busId) async {
+  static Future<List<Map<String, dynamic>>> verificarAlertasFiltrosCriticos(
+      String busId) async {
     final bus = await getBusById(busId);
-    if (bus == null || bus.mantenimientoPreventivo == null || bus.kilometraje == null) {
+    if (bus == null ||
+        bus.mantenimientoPreventivo == null ||
+        bus.kilometraje == null) {
       return [];
     }
 
     final alertas = <Map<String, dynamic>>[];
-    final promedioMensual = bus.promedioKmMensuales ?? 5000; // Default 5000 km/mes
+    final promedioMensual =
+        bus.promedioKmMensuales ?? 5000; // Default 5000 km/mes
     const umbralCritico = 5000; // Umbral de 5000 km/mes según el usuario
 
     // Obtener tipos críticos desde la base de datos
     final tiposCriticos = await getTiposMantenimientoPersonalizados();
-    final filtrosCriticos = tiposCriticos.where((t) => t.esFiltroCritico && t.activo).toList();
+    final filtrosCriticos =
+        tiposCriticos.where((t) => t.esFiltroCritico && t.activo).toList();
 
     for (final filtroCritico in filtrosCriticos) {
       // Buscar el último mantenimiento de este filtro específico
-      final ultimoMantenimiento = bus.mantenimientoPreventivo!.historialMantenimientos
+      final ultimoMantenimiento = bus
+          .mantenimientoPreventivo!.historialMantenimientos
           .where((m) => m.tituloPersonalizado == filtroCritico.titulo)
           .fold<RegistroMantenimiento?>(null, (prev, current) {
         if (prev == null) return current;
-        return current.fechaUltimoCambio.isAfter(prev.fechaUltimoCambio) ? current : prev;
+        return current.fechaUltimoCambio.isAfter(prev.fechaUltimoCambio)
+            ? current
+            : prev;
       });
 
       double kmDesdeUltimoMantenimiento;
       DateTime fechaBase;
 
       if (ultimoMantenimiento != null) {
-        kmDesdeUltimoMantenimiento = bus.kilometraje! - ultimoMantenimiento.kilometrajeUltimoCambio;
+        kmDesdeUltimoMantenimiento =
+            bus.kilometraje! - ultimoMantenimiento.kilometrajeUltimoCambio;
         fechaBase = ultimoMantenimiento.fechaUltimoCambio;
       } else {
         // Si no hay historial, usar desde la creación del sistema de mantenimiento
@@ -841,18 +888,23 @@ class DataService {
       }
 
       // Calcular meses transcurridos
-      final mesesTranscurridos = DateTime.now().difference(fechaBase).inDays / 30.0;
-      final kmPromedioMensual = mesesTranscurridos > 0 ? kmDesdeUltimoMantenimiento / mesesTranscurridos : 0;
+      final mesesTranscurridos =
+          DateTime.now().difference(fechaBase).inDays / 30.0;
+      final kmPromedioMensual = mesesTranscurridos > 0
+          ? kmDesdeUltimoMantenimiento / mesesTranscurridos
+          : 0;
 
       // Verificar si supera el umbral crítico
       if (kmPromedioMensual > umbralCritico) {
         String nivelUrgencia;
         Color colorAlerta;
 
-        if (kmPromedioMensual > umbralCritico * 1.5) { // Más de 7500 km/mes
+        if (kmPromedioMensual > umbralCritico * 1.5) {
+          // Más de 7500 km/mes
           nivelUrgencia = 'CRÍTICO';
           colorAlerta = Colors.red;
-        } else if (kmPromedioMensual > umbralCritico * 1.2) { // Más de 6000 km/mes
+        } else if (kmPromedioMensual > umbralCritico * 1.2) {
+          // Más de 6000 km/mes
           nivelUrgencia = 'URGENTE';
           colorAlerta = Colors.orange;
         } else {
@@ -893,7 +945,8 @@ class DataService {
   }
 
   /// Obtiene todas las alertas de filtros críticos para todos los buses
-  static Future<List<Map<String, dynamic>>> obtenerTodasLasAlertasFiltrosCriticos() async {
+  static Future<List<Map<String, dynamic>>>
+      obtenerTodasLasAlertasFiltrosCriticos() async {
     final buses = await getBuses();
     final todasLasAlertas = <Map<String, dynamic>>[];
 
@@ -909,21 +962,26 @@ class DataService {
   static Future<Map<String, dynamic>> getEstadisticasFiltrosCriticos() async {
     final todasLasAlertas = await obtenerTodasLasAlertasFiltrosCriticos();
 
-    final alertasCriticas = todasLasAlertas.where((a) => a['nivelUrgencia'] == 'CRÍTICO').length;
-    final alertasUrgentes = todasLasAlertas.where((a) => a['nivelUrgencia'] == 'URGENTE').length;
-    final alertasAtencion = todasLasAlertas.where((a) => a['nivelUrgencia'] == 'ATENCIÓN').length;
+    final alertasCriticas =
+        todasLasAlertas.where((a) => a['nivelUrgencia'] == 'CRÍTICO').length;
+    final alertasUrgentes =
+        todasLasAlertas.where((a) => a['nivelUrgencia'] == 'URGENTE').length;
+    final alertasAtencion =
+        todasLasAlertas.where((a) => a['nivelUrgencia'] == 'ATENCIÓN').length;
 
     // Contar por tipo de filtro
     final alertasPorFiltro = <String, int>{};
     for (final alerta in todasLasAlertas) {
       final filtro = alerta['filtro'] as TipoMantenimientoPersonalizado;
-      alertasPorFiltro[filtro.titulo] = (alertasPorFiltro[filtro.titulo] ?? 0) + 1;
+      alertasPorFiltro[filtro.titulo] =
+          (alertasPorFiltro[filtro.titulo] ?? 0) + 1;
     }
 
     // Calcular promedio de km mensuales general
     double promedioKmGeneral = 0;
     if (todasLasAlertas.isNotEmpty) {
-      final totalKm = todasLasAlertas.fold<double>(0, (sum, alerta) => sum + (alerta['kmPromedioMensual'] as double));
+      final totalKm = todasLasAlertas.fold<double>(
+          0, (sum, alerta) => sum + (alerta['kmPromedioMensual'] as double));
       promedioKmGeneral = totalKm / todasLasAlertas.length;
     }
 
@@ -950,7 +1008,11 @@ class DataService {
     String? marcaRepuesto,
   }) async {
     // Verificar que sea un filtro crítico válido
-    final filtrosCriticos = ['Filtro de Aceite', 'Filtro de Aire', 'Filtro de Combustible'];
+    final filtrosCriticos = [
+      'Filtro de Aceite',
+      'Filtro de Aire',
+      'Filtro de Combustible'
+    ];
     if (!filtrosCriticos.contains(tituloFiltro)) {
       throw Exception('$tituloFiltro no es un filtro crítico válido');
     }
@@ -958,7 +1020,8 @@ class DataService {
     // Obtener o crear el tipo personalizado para este filtro crítico
     final tipoPersonalizado = await crearOreutilizarTipo(
       titulo: tituloFiltro,
-      descripcion: 'Cambio preventivo del ${tituloFiltro.toLowerCase()}. Crítico para alertas de kilometraje.',
+      descripcion:
+          'Cambio preventivo del ${tituloFiltro.toLowerCase()}. Crítico para alertas de kilometraje.',
       tipoBase: TipoMantenimiento.preventivo,
     );
 
@@ -968,7 +1031,8 @@ class DataService {
     await registrarMantenimientoPersonalizado(
       busId: busId,
       tituloMantenimiento: tituloFiltro,
-      descripcionMantenimiento: 'Mantenimiento crítico con seguimiento de kilometraje. Umbral: 5000 km/mes.',
+      descripcionMantenimiento:
+          'Mantenimiento crítico con seguimiento de kilometraje. Umbral: 5000 km/mes.',
       tipoMantenimiento: TipoMantenimiento.preventivo,
       kilometrajeActual: kilometrajeActual,
       fechaMantenimiento: fechaMantenimiento,
@@ -977,7 +1041,8 @@ class DataService {
       marcaRepuesto: marcaRepuesto,
     );
 
-    print('✅ Filtro crítico $tituloFiltro registrado para seguimiento de kilometraje');
+    print(
+        '✅ Filtro crítico $tituloFiltro registrado para seguimiento de kilometraje');
   }
 
   /// Actualiza la configuración del umbral de kilometraje para filtros críticos
@@ -988,14 +1053,20 @@ class DataService {
   }
 
   /// Método auxiliar para verificar si un mantenimiento corresponde a un filtro crítico
-  static bool esMantenimientoFiltroCritico(RegistroMantenimiento mantenimiento) {
-    final filtrosCriticos = ['Filtro de Aceite', 'Filtro de Aire', 'Filtro de Combustible'];
+  static bool esMantenimientoFiltroCritico(
+      RegistroMantenimiento mantenimiento) {
+    final filtrosCriticos = [
+      'Filtro de Aceite',
+      'Filtro de Aire',
+      'Filtro de Combustible'
+    ];
     return mantenimiento.tituloPersonalizado != null &&
         filtrosCriticos.contains(mantenimiento.tituloPersonalizado!);
   }
 
   /// Obtiene recomendaciones para el mantenimiento de filtros críticos
-  static Future<List<Map<String, dynamic>>> obtenerRecomendacionesFiltrosCriticos(String busId) async {
+  static Future<List<Map<String, dynamic>>>
+      obtenerRecomendacionesFiltrosCriticos(String busId) async {
     final alertas = await verificarAlertasFiltrosCriticos(busId);
     final recomendaciones = <Map<String, dynamic>>[];
 
@@ -1009,15 +1080,18 @@ class DataService {
       Color color;
 
       if (kmPromedio > 7500) {
-        recomendacion = 'Cambio INMEDIATO del ${filtro.titulo}. Riesgo de daño al motor.';
+        recomendacion =
+            'Cambio INMEDIATO del ${filtro.titulo}. Riesgo de daño al motor.';
         prioridad = 'CRÍTICA';
         color = Colors.red;
       } else if (kmPromedio > 6000) {
-        recomendacion = 'Programar cambio del ${filtro.titulo} dentro de los próximos 3 días.';
+        recomendacion =
+            'Programar cambio del ${filtro.titulo} dentro de los próximos 3 días.';
         prioridad = 'URGENTE';
         color = Colors.orange;
       } else {
-        recomendacion = 'Considerar cambio del ${filtro.titulo} en la próxima semana.';
+        recomendacion =
+            'Considerar cambio del ${filtro.titulo} en la próxima semana.';
         prioridad = 'ATENCIÓN';
         color = Colors.yellow[700]!;
       }
@@ -1048,9 +1122,11 @@ class DataService {
   static Future<void> deleteFiltroRepuesto(String id) =>
       FirebaseService.deleteFiltroRepuesto(id);
 
-  static Future<void> deleteMantenimientoFromBus(String busId, String mantenimientoId) async {
+  static Future<void> deleteMantenimientoFromBus(
+      String busId, String mantenimientoId) async {
     final bus = await getBusById(busId);
-    if (bus == null) throw Exception('Bus no encontrado para eliminar mantenimiento.');
+    if (bus == null)
+      throw Exception('Bus no encontrado para eliminar mantenimiento.');
 
     if (bus.mantenimientoPreventivo != null) {
       final historial = bus.mantenimientoPreventivo!.historialMantenimientos;
@@ -1068,9 +1144,11 @@ class DataService {
     }
   }
 
-  static Future<void> updateMantenimientoRegistro(String busId, RegistroMantenimiento registroActualizado) async {
+  static Future<void> updateMantenimientoRegistro(
+      String busId, RegistroMantenimiento registroActualizado) async {
     final bus = await getBusById(busId);
-    if (bus == null) throw Exception('Bus no encontrado para actualizar mantenimiento.');
+    if (bus == null)
+      throw Exception('Bus no encontrado para actualizar mantenimiento.');
 
     if (bus.mantenimientoPreventivo != null) {
       final historial = bus.mantenimientoPreventivo!.historialMantenimientos;
@@ -1080,10 +1158,12 @@ class DataService {
         historial[index] = registroActualizado;
         await updateBus(bus);
       } else {
-        throw Exception('No se encontró el registro de mantenimiento para actualizar.');
+        throw Exception(
+            'No se encontró el registro de mantenimiento para actualizar.');
       }
     } else {
-      throw Exception('El bus no tiene un sistema de mantenimiento preventivo configurado.');
+      throw Exception(
+          'El bus no tiene un sistema de mantenimiento preventivo configurado.');
     }
   }
 }
