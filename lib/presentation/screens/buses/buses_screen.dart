@@ -8,6 +8,7 @@ import '../../dialogs/bus_form/bus_form_dialog.dart';
 import '../../dialogs/historial_completo/historial_completo_dialog.dart';
 import '../../dialogs/mantenimiento_preventivo/mantenimiento_preventivo_dialog.dart';
 import '../../dialogs/asignar_repuesto/asignar_repuesto_dialog.dart';
+import '../../dialogs/ver_repuestos/ver_repuestos_dialog.dart';
 import '../../../widgets/actualizar_kilometraje_dialog.dart';
 import '../../widgets/buses/buses_widgets.dart';
 import 'layouts/buses_desktop_layout.dart';
@@ -67,6 +68,7 @@ class _BusesScreenState extends State<BusesScreen>
       onActualizarRevisionTecnica: _actualizarRevisionTecnica,
       onRegistrarMantenimiento: _registrarMantenimiento,
       onAsignarRepuesto: _asignarRepuesto,
+      onVerRepuestos: _verRepuestos,
       onMostrarHistorial: _mostrarHistorialCompleto,
       onEditarBus: _mostrarDialogoBus,
       onEliminarBus: _eliminarBus,
@@ -551,6 +553,17 @@ class _BusesScreenState extends State<BusesScreen>
       bus: bus,
       onRepuestoAsignado: () {
         // Refresh data
+        setState(() {});
+      },
+    );
+  }
+
+  void _verRepuestos(BuildContext context, Bus bus) {
+    VerRepuestosDialog.show(
+      context,
+      bus: bus,
+      onRepuestoModificado: () {
+        // Refresh data si es necesario
         setState(() {});
       },
     );

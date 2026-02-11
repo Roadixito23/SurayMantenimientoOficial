@@ -548,6 +548,7 @@ void showBusActionsDialog({
   required void Function(BuildContext, Bus) onActualizarRevisionTecnica,
   required void Function(BuildContext, Bus) onRegistrarMantenimiento,
   required void Function(BuildContext, Bus) onAsignarRepuesto,
+  required void Function(BuildContext, Bus) onVerRepuestos,
   required void Function(BuildContext, Bus) onMostrarHistorial,
   required void Function(BuildContext, {Bus? bus}) onEditarBus,
   required void Function(String) onEliminarBus,
@@ -711,18 +712,6 @@ void showBusActionsDialog({
                                 ),
                                 SizedBox(height: 8),
                                 _buildActionOption(
-                                  icon: Icons.build_circle,
-                                  label: 'Asignar Repuesto',
-                                  description: 'Vincular repuestos al bus',
-                                  color: SurayColors.azulMarinoClaro,
-                                  isSmallScreen: isSmallScreen,
-                                  onTap: () {
-                                    Navigator.pop(ctx);
-                                    onAsignarRepuesto(context, bus);
-                                  },
-                                ),
-                                SizedBox(height: 8),
-                                _buildActionOption(
                                   icon: Icons.history,
                                   label: 'Historial Completo',
                                   description: 'Ver todos los registros',
@@ -733,7 +722,73 @@ void showBusActionsDialog({
                                     onMostrarHistorial(context, bus);
                                   },
                                 ),
-                                // Divisor
+                                // Divisor - Sección Repuestos
+                                SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Divider(
+                                        color: SurayColors.grisAntracitaClaro
+                                            .withOpacity(0.3),
+                                        thickness: 1,
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 12),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.build_circle,
+                                            size: isSmallScreen ? 14 : 16,
+                                            color: Color(0xFF8E24AA),
+                                          ),
+                                          SizedBox(width: 6),
+                                          Text(
+                                            'Repuestos',
+                                            style: TextStyle(
+                                              color: Color(0xFF8E24AA),
+                                              fontSize: isSmallScreen ? 11 : 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Divider(
+                                        color: SurayColors.grisAntracitaClaro
+                                            .withOpacity(0.3),
+                                        thickness: 1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 12),
+                                _buildActionOption(
+                                  icon: Icons.visibility,
+                                  label: 'Visualizar Repuestos',
+                                  description: 'Ver repuestos asignados',
+                                  color: Color(0xFF8E24AA),
+                                  isSmallScreen: isSmallScreen,
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    onVerRepuestos(context, bus);
+                                  },
+                                ),
+                                SizedBox(height: 8),
+                                _buildActionOption(
+                                  icon: Icons.build_circle,
+                                  label: 'Asignar Repuesto',
+                                  description: 'Vincular repuestos al bus',
+                                  color: SurayColors.azulMarinoClaro,
+                                  isSmallScreen: isSmallScreen,
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    onAsignarRepuesto(context, bus);
+                                  },
+                                ),
+                                // Divisor - Otras Opciones
                                 SizedBox(height: 16),
                                 Row(
                                   children: [
