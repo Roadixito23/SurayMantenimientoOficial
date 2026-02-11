@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dashboard_screen.dart';
-import 'buses_screen.dart';
-import 'repuestos_screen.dart';
-import 'reportes_screen.dart';
-import 'settings_screen.dart';
+import '../presentation/screens/dashboard/dashboard_screen.dart';
+import '../presentation/screens/buses/buses_screen.dart';
+import '../presentation/screens/repuestos/repuestos_screen.dart';
+import '../presentation/screens/reportes/reportes_screen.dart';
+import '../presentation/screens/settings/settings_screen.dart';
 import '../main.dart'; // Para acceder a SurayColors
+import '../core/utils/responsive_helper.dart';
 
 class MainScreen extends StatefulWidget {
   @override
@@ -70,50 +71,47 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isSmallScreen = size.width < 800; // Pantallas menores a 800px
+    final isMobile = ResponsiveHelper.isMobile(context);
 
-    return Scaffold(
-      // Drawer para pantallas pequeñas
-      drawer: isSmallScreen ? _buildDrawer() : null,
-      // BottomNavigationBar para pantallas muy pequeñas (móvil)
-      bottomNavigationBar:
-          size.width < 600 ? _buildBottomNavigationBar() : null,
-      body: CallbackShortcuts(
-        bindings: {
-          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit1):
-              () => _navigateTo(0),
-          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit2):
-              () => _navigateTo(1),
-          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit3):
-              () => _navigateTo(2),
-          LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit4):
-              () => _navigateTo(3),
-          LogicalKeySet(LogicalKeyboardKey.f5): () => _refreshCurrentScreen(),
-          LogicalKeySet(LogicalKeyboardKey.escape): () =>
-              _showShortcutsDialog(),
-        },
-        child: Focus(
-          autofocus: true,
-          child: Column(
+    return CallbackShortcuts(
+      bindings: {
+        LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit1):
+            () => _navigateTo(0),
+        LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit2):
+            () => _navigateTo(1),
+        LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit3):
+            () => _navigateTo(2),
+        LogicalKeySet(LogicalKeyboardKey.alt, LogicalKeyboardKey.digit4):
+            () => _navigateTo(3),
+        LogicalKeySet(LogicalKeyboardKey.f5): () => _refreshCurrentScreen(),
+        LogicalKeySet(LogicalKeyboardKey.escape): () =>
+            _showShortcutsDialog(),
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          backgroundColor: SurayColors.blancoHumo,
+          // Drawer para móvil
+          drawer: isMobile ? _buildDrawer() : null,
+          body: Column(
             children: [
-              // Barra superior mejorada
-              _buildTopAppBar(isSmallScreen),
+              // Barra superior personalizada
+              _buildTopAppBar(isMobile),
 
-              // Breadcrumbs (ocultar en pantallas muy pequeñas)
-              if (size.width >= 600) _buildBreadcrumbs(),
+              // Breadcrumbs (solo desktop)
+              if (!isMobile) _buildBreadcrumbs(),
 
-              // Contenido principal
+              // Contenido principal con navegación adaptativa
               Expanded(
                 child: Row(
                   children: [
-                    // Navegación lateral expandible (solo en pantallas grandes)
-                    if (!isSmallScreen) ...[
+                    // NavigationRail para desktop
+                    if (!isMobile) ...[
                       _buildNavigationRail(),
                       VerticalDivider(thickness: 1, width: 1),
                     ],
 
-                    // Área de contenido principal
+                    // Área de contenido
                     Expanded(
                       child: Transform.scale(
                         scale: _zoomLevel,
@@ -122,8 +120,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           color: SurayColors.blancoHumo,
                           child: Column(
                             children: [
-                              // Barra de herramientas contextual (ocultar en móvil)
-                              if (size.width >= 600) _buildContextualToolbar(),
+                              // Barra de herramientas contextual (solo desktop)
+                              if (!isMobile) _buildContextualToolbar(),
 
                               // Contenido de la pantalla
                               Expanded(
@@ -157,16 +155,18 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 ),
               ),
 
-              // Barra de estado (ocultar en pantallas pequeñas si hay BottomNavigationBar)
-              if (size.width >= 600) _buildStatusBar(),
+              // Barra de estado (solo desktop)
+              if (!isMobile) _buildStatusBar(),
             ],
           ),
+          // BottomNavigationBar para móvil
+          bottomNavigationBar: isMobile ? _buildBottomNavigationBar() : null,
         ),
       ),
     );
   }
 
-  Widget _buildTopAppBar(bool isSmallScreen) {
+  Widget _buildTopAppBar(bool isMobile) {
     return Container(
       height: 60,
       decoration: BoxDecoration(
@@ -185,30 +185,28 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       ),
       child: Row(
         children: [
-          // Botón de menú (Drawer para móvil, toggle para desktop)
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                if (isSmallScreen) {
-                  Scaffold.of(context).openDrawer();
-                } else {
+          // Botón de menú (solo para desktop - toggle sidebar)
+          if (!isMobile)
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
                   setState(() {
                     _isRailExtended = !_isRailExtended;
                   });
-                }
-              },
-              child: Container(
-                width: 60,
-                child: Icon(
-                  isSmallScreen
-                      ? Icons.menu
-                      : (_isRailExtended ? Icons.menu_open : Icons.menu),
-                  color: Colors.white,
+                },
+                child: Container(
+                  width: 60,
+                  child: Icon(
+                    _isRailExtended ? Icons.menu_open : Icons.menu,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
-          ),
+
+          // Espaciado en móvil donde estaba el botón de menú
+          if (isMobile) SizedBox(width: 16),
 
           // Logo y título
           Expanded(
@@ -231,118 +229,125 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       color: SurayColors.blancoHumo, size: 24),
                 ),
                 SizedBox(width: 12),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Sistema de Gestión de Buses',
-                      style: TextStyle(
-                        color: SurayColors.blancoHumo,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                // Título (mostrar versión compacta en móvil)
+                if (isMobile)
+                  Text(
+                    'Suray',
+                    style: TextStyle(
+                      color: SurayColors.blancoHumo,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                else
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sistema de Gestión de Buses',
+                        style: TextStyle(
+                          color: SurayColors.blancoHumo,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                    Row(
-                      children: [
-                        Text(
-                          'Suray',
-                          style: TextStyle(
-                            color: SurayColors.naranjaQuemadoClaro,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                      Row(
+                        children: [
+                          Text(
+                            'Suray',
+                            style: TextStyle(
+                              color: SurayColors.naranjaQuemadoClaro,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        Text(
-                          ' • ${_titles[_selectedIndex]}',
-                          style: TextStyle(
-                            color: SurayColors.blancoHumo.withOpacity(0.8),
-                            fontSize: 12,
+                          Text(
+                            ' • ${_titles[_selectedIndex]}',
+                            style: TextStyle(
+                              color: SurayColors.blancoHumo.withOpacity(0.8),
+                              fontSize: 12,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                        ],
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
 
-          // Herramientas de la barra superior
+          // Herramientas de la barra superior (solo desktop o elementos esenciales en móvil)
           Row(
             children: [
-              // Controles de zoom
-              _buildTopBarButton(
-                icon: Icons.remove,
-                tooltip:
-                    'Reducir zoom (${(_zoomLevel * 100).toStringAsFixed(0)}%)',
-                onPressed: _zoomOut,
-              ),
-
-              SizedBox(width: 4),
-
-              GestureDetector(
-                onTap: _resetZoom,
-                child: Tooltip(
-                  message: 'Restablecer zoom (100%)',
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '${(_zoomLevel * 100).toStringAsFixed(0)}%',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+              // Controles de zoom (solo desktop)
+              if (!isMobile) ...[
+                _buildTopBarButton(
+                  icon: Icons.remove,
+                  tooltip:
+                      'Reducir zoom (${(_zoomLevel * 100).toStringAsFixed(0)}%)',
+                  onPressed: _zoomOut,
+                ),
+                SizedBox(width: 4),
+                GestureDetector(
+                  onTap: _resetZoom,
+                  child: Tooltip(
+                    message: 'Restablecer zoom (100%)',
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '${(_zoomLevel * 100).toStringAsFixed(0)}%',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+                SizedBox(width: 4),
+                _buildTopBarButton(
+                  icon: Icons.add,
+                  tooltip:
+                      'Ampliar zoom (${(_zoomLevel * 100).toStringAsFixed(0)}%)',
+                  onPressed: _zoomIn,
+                ),
+                SizedBox(width: 16),
+                Container(
+                  height: 24,
+                  width: 1,
+                  color: Colors.white.withOpacity(0.3),
+                ),
+                SizedBox(width: 16),
+              ],
 
-              SizedBox(width: 4),
-
-              _buildTopBarButton(
-                icon: Icons.add,
-                tooltip:
-                    'Ampliar zoom (${(_zoomLevel * 100).toStringAsFixed(0)}%)',
-                onPressed: _zoomIn,
-              ),
-
-              SizedBox(width: 16),
-              Container(
-                height: 24,
-                width: 1,
-                color: Colors.white.withOpacity(0.3),
-              ),
-              SizedBox(width: 16),
-
-              // Botones de acción
+              // Botones de acción (siempre visibles)
               _buildTopBarButton(
                 icon: Icons.refresh,
                 tooltip: 'Actualizar (F5)',
                 onPressed: _refreshCurrentScreen,
               ),
 
-              SizedBox(width: 8),
-
-              _buildTopBarButton(
-                icon: Icons.help_outline,
-                tooltip: 'Atajos de teclado (Esc)',
-                onPressed: _showShortcutsDialog,
-              ),
-
-              SizedBox(width: 8),
-
-              _buildTopBarButton(
-                icon: Icons.settings,
-                tooltip: 'Configuración',
-                onPressed: _showSettings,
-              ),
+              if (!isMobile) ...[
+                SizedBox(width: 8),
+                _buildTopBarButton(
+                  icon: Icons.help_outline,
+                  tooltip: 'Atajos de teclado (Esc)',
+                  onPressed: _showShortcutsDialog,
+                ),
+                SizedBox(width: 8),
+                _buildTopBarButton(
+                  icon: Icons.settings,
+                  tooltip: 'Configuración',
+                  onPressed: _showSettings,
+                ),
+              ],
 
               SizedBox(width: 16),
             ],
@@ -439,7 +444,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               ),
             ),
             child: Text(
-              'v2.0.23',
+              'v3.02',
               style: TextStyle(
                 color: SurayColors.naranjaQuemado,
                 fontSize: 11,
@@ -622,7 +627,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           size: 14, color: SurayColors.azulMarinoProfundo),
                       SizedBox(width: 6),
                       Text(
-                        'Sistema v2.0.23',
+                        'Sistema v3.02',
                         style: TextStyle(
                           fontSize: 12,
                           color: SurayColors.azulMarinoProfundo,
@@ -687,24 +692,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildContextButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-  }) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 16),
-      label: Text(label, style: TextStyle(fontSize: 14)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: SurayColors.azulMarinoProfundo,
-        foregroundColor: SurayColors.blancoHumo,
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        elevation: 2,
       ),
     );
   }
@@ -793,85 +780,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     setState(() {
       _zoomLevel = 1.0;
     });
-  }
-
-  void _triggerScreenAction(String action) {
-    // Implementar acciones específicas por pantalla
-    print('Acción triggereada: $action en pantalla $_selectedIndex');
-  }
-
-  void _showNotifications() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.notifications, color: SurayColors.azulMarinoProfundo),
-            SizedBox(width: 8),
-            Text('Notificaciones'),
-          ],
-        ),
-        content: Container(
-          width: 400,
-          height: 300,
-          child: ListView(
-            children: [
-              _buildNotificationTile(
-                icon: Icons.warning,
-                title: 'Buses con revisión técnica vencida',
-                subtitle: '2 buses requieren atención inmediata',
-                time: 'Hace 5 min',
-                color: Colors.red,
-              ),
-              _buildNotificationTile(
-                icon: Icons.build,
-                title: 'Repuestos próximos a vencer',
-                subtitle: '3 repuestos requieren cambio pronto',
-                time: 'Hace 1 hora',
-                color: Colors.orange,
-              ),
-              _buildNotificationTile(
-                icon: Icons.check_circle,
-                title: 'Mantenimiento completado',
-                subtitle: 'Bus AB-CD-12 listo para servicio',
-                time: 'Hace 2 horas',
-                color: Colors.green,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNotificationTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String time,
-    required Color color,
-  }) {
-    return ListTile(
-      leading: Container(
-        padding: EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: color, size: 20),
-      ),
-      title: Text(title,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-      subtitle: Text(subtitle, style: TextStyle(fontSize: 12)),
-      trailing: Text(time, style: TextStyle(fontSize: 11, color: Colors.grey)),
-      dense: true,
-    );
   }
 
   void _showShortcutsDialog() {
@@ -995,7 +903,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   Text(
-                    'Suray v2.0.23',
+                    'Suray v3.02',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 14,
@@ -1065,11 +973,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       currentIndex: _selectedIndex,
       onTap: _navigateTo,
       type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: SurayColors.azulMarinoProfundo,
-      unselectedItemColor: SurayColors.grisAntracita,
+      backgroundColor: SurayColors.azulMarinoProfundo,
+      selectedItemColor: SurayColors.naranjaQuemado,
+      unselectedItemColor: Colors.white70,
       selectedFontSize: 12,
-      unselectedFontSize: 11,
+      unselectedFontSize: 10,
+      selectedIconTheme: IconThemeData(size: 26),
+      unselectedIconTheme: IconThemeData(size: 22),
+      selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
       items: List.generate(_titles.length, (index) {
         return BottomNavigationBarItem(
           icon: Icon(_icons[index]),

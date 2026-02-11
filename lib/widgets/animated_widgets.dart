@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 
 // =====================================================================
-// === WIDGETS ANIMADOS MODERNOS v2.0.23 ==============================
+// === WIDGETS ANIMADOS MODERNOS v3.02 ==============================
 // =====================================================================
 
 /// Widget con animación de hover para interacciones en web

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart'; // Archivo generado por FlutterFire CLI
-import 'screens/main_screen.dart';
-import 'screens/login_screen.dart';
+import 'presentation/screens/login/login_screen.dart';
 import 'services/firebase_service.dart';
 import 'services/auth_service.dart';
 
 // =====================================================================
-// === COLORES CORPORATIVOS SURAY v2.0.23 ==============================
+// === COLORES CORPORATIVOS SURAY v3.02 ==============================
 // =====================================================================
 class SurayColors {
   static const Color azulMarinoProfundo = Color(0xFF1A3B5C); // Color principal
@@ -23,6 +23,7 @@ class SurayColors {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es');
 
   try {
     print('🚀 Iniciando aplicación...');
@@ -69,7 +70,7 @@ class BusManagementApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Sistema de Gestión de Buses - Suray v2.0.23',
+      title: 'Sistema de Gestión de Buses - Suray v3.02',
       // Builder para ajustar el zoom y hacer la app responsive
       builder: (context, child) {
         return MediaQuery(
@@ -572,7 +573,7 @@ class _AppInitializerState extends State<_AppInitializer> {
                       ),
                       SizedBox(width: 8),
                       Text(
-                        'v2.0.23 • Proyecto: mant-suray',
+                        'v3.02 • Proyecto: mant-suray',
                         style: TextStyle(
                           fontSize: 12,
                           color: SurayColors.blancoHumo.withOpacity(0.7),

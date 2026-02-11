@@ -1,0 +1,1240 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:universal_html/html.dart' as html;
+import 'package:intl/intl.dart';
+import '../../../../models/bus.dart';
+import '../../../../models/reporte_diario.dart';
+import '../../../../models/mantenimiento_preventivo.dart';
+import '../../../../models/tipo_mantenimiento_personalizado.dart';
+import '../../../../services/data_service.dart';
+import '../../../../services/chilean_utils.dart';
+
+/// Desktop layout del historial completo con filtros y tabla horizontal
+class HistorialCompletoDesktopLayout extends StatefulWidget {
+  final Bus bus;
+
+  const HistorialCompletoDesktopLayout({Key? key, required this.bus})
+      : super(key: key);
+
+  @override
+  _HistorialCompletoDesktopLayoutState createState() =>
+      _HistorialCompletoDesktopLayoutState();
+}
+
+class _HistorialCompletoDesktopLayoutState
+    extends State<HistorialCompletoDesktopLayout> {
+  String _filtroTipo = 'Todos';
+  String _filtroEstado = 'Todos';
+  String _filtroTipoMantenimiento =
+      'Todos'; // ✅ ACTUALIZADO: Filtro por tipo de mantenimiento
+  String _filtroTipoTrabajo = 'Todos'; // Filtro por tipo de trabajo (reportes)
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        children: [
+          Icon(Icons.history, color: Color(0xFF1565C0)),
+          SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Historial Completo'),
+                Text(
+                  '${widget.bus.identificadorDisplay} - ${widget.bus.marca} ${widget.bus.modelo} (${widget.bus.anio})',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      content: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.8,
+        constraints: BoxConstraints(maxWidth: 900),
+        child: Column(
+          children: [
+            // Estadísticas resumidas
+            _buildEstadisticasCard(),
+            SizedBox(height: 16),
+
+            // Filtros actualizados
+            _buildFiltrosActualizados(),
+            SizedBox(height: 16),
+
+            // Lista combinada de mantenimientos y reportes
+            Expanded(
+              child: _buildListaCompleta(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cerrar'),
+        ),
+        ElevatedButton.icon(
+          onPressed: () => _exportarHistorial(),
+          icon: Icon(Icons.download),
+          label: Text('Exportar'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFF1565C0),
+            foregroundColor: Colors.white,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEstadisticasCard() {
+    return FutureBuilder<Map<String, int>>(
+      future: _getEstadisticasCompletas(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Container(
+              height: 80, child: Center(child: CircularProgressIndicator()));
+        }
+
+        final stats = snapshot.data!;
+        return Card(
+          color: Colors.blue[50],
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatItem(
+                  'Total Registros',
+                  '${stats['total']}',
+                  Icons.list_alt,
+                  Colors.blue,
+                ),
+                _buildStatItem(
+                  'Correctivos',
+                  stats['correctivos'].toString(),
+                  Icons.handyman,
+                  Color(0xFFE53E3E),
+                ),
+                _buildStatItem(
+                  'Rutinarios',
+                  stats['rutinarios'].toString(),
+                  Icons.schedule,
+                  Color(0xFF3182CE),
+                ),
+                _buildStatItem(
+                  'Preventivos',
+                  stats['preventivos'].toString(),
+                  Icons.build_circle,
+                  Color(0xFF38A169),
+                ),
+                _buildStatItem(
+                  'Reportes',
+                  stats['reportes'].toString(),
+                  Icons.description,
+                  Colors.purple,
+                ),
+                _buildStatItem(
+                  'Completados',
+                  stats['completados'].toString(),
+                  Icons.check_circle,
+                  Colors.teal,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFiltrosActualizados() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Primera fila de filtros
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _filtroTipo,
+                    decoration: InputDecoration(
+                      labelText: 'Tipo de Actividad',
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: [
+                      DropdownMenuItem(value: 'Todos', child: Text('Todos')),
+                      DropdownMenuItem(
+                          value: 'Mantenimiento',
+                          child: Text('🔧 Mantenimientos')),
+                      DropdownMenuItem(
+                          value: 'Reporte',
+                          child: Text('📋 Reportes de Trabajo')),
+                    ],
+                    onChanged: (value) => setState(() => _filtroTipo = value!),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _filtroEstado,
+                    decoration: InputDecoration(
+                      labelText: 'Estado',
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: [
+                      DropdownMenuItem(value: 'Todos', child: Text('Todos')),
+                      DropdownMenuItem(
+                          value: 'Completados', child: Text('Completados')),
+                      DropdownMenuItem(
+                          value: 'En Progreso', child: Text('En Progreso')),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _filtroEstado = value!),
+                  ),
+                ),
+              ],
+            ),
+
+            SizedBox(height: 12),
+
+            // Segunda fila: Filtros específicos por tipo
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _filtroTipoMantenimiento,
+                    decoration: InputDecoration(
+                      labelText: 'Tipo de Mantenimiento',
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                          value: 'Todos', child: Text('Todos los tipos')),
+                      DropdownMenuItem(
+                          value: 'Correctivo',
+                          child: Row(
+                            children: [
+                              Icon(Icons.handyman,
+                                  size: 16, color: Color(0xFFE53E3E)),
+                              SizedBox(width: 8),
+                              Text('Correctivo'),
+                            ],
+                          )),
+                      DropdownMenuItem(
+                          value: 'Rutinario',
+                          child: Row(
+                            children: [
+                              Icon(Icons.schedule,
+                                  size: 16, color: Color(0xFF3182CE)),
+                              SizedBox(width: 8),
+                              Text('Rutinario'),
+                            ],
+                          )),
+                      DropdownMenuItem(
+                          value: 'Preventivo',
+                          child: Row(
+                            children: [
+                              Icon(Icons.build_circle,
+                                  size: 16, color: Color(0xFF38A169)),
+                              SizedBox(width: 8),
+                              Text('Preventivo'),
+                            ],
+                          )),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _filtroTipoMantenimiento = value!),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _filtroTipoTrabajo,
+                    decoration: InputDecoration(
+                      labelText: 'Categoría de Trabajo (Reportes)',
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                          value: 'Todos', child: Text('Todas las categorías')),
+                      DropdownMenuItem(
+                          value: 'Mantenimiento Rutinario',
+                          child: Text('🔵 Mantenimiento Rutinario')),
+                      DropdownMenuItem(
+                          value: 'Reparación Correctiva',
+                          child: Text('🔴 Reparación Correctiva')),
+                      DropdownMenuItem(
+                          value: 'Inspección Técnica',
+                          child: Text('🟣 Inspección Técnica')),
+                      DropdownMenuItem(
+                          value: 'Mantenimiento Preventivo',
+                          child: Text('🟢 Mantenimiento Preventivo')),
+                      DropdownMenuItem(
+                          value: 'Diagnóstico', child: Text('🟠 Diagnóstico')),
+                      DropdownMenuItem(
+                          value: 'Limpieza y Mantenimiento',
+                          child: Text('🟡 Limpieza y Mantenimiento')),
+                      DropdownMenuItem(value: 'Otros', child: Text('⚪ Otros')),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _filtroTipoTrabajo = value!),
+                  ),
+                ),
+              ],
+            ),
+
+            SizedBox(height: 12),
+
+            // Botón limpiar filtros
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _limpiarFiltros,
+                  icon: Icon(Icons.clear),
+                  label: Text('Limpiar Filtros'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListaCompleta() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _getRegistrosCompletos(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        final registros = snapshot.data ?? [];
+
+        if (registros.isEmpty) {
+          return _buildEmptyState();
+        }
+
+        return ListView.builder(
+          itemCount: registros.length,
+          itemBuilder: (context, index) {
+            final registro = registros[index];
+            return _buildRegistroCard(registro);
+          },
+        );
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _getRegistrosCompletos() async {
+    List<Map<String, dynamic>> todosLosRegistros = [];
+
+    // ✅ ACTUALIZADO: Obtener mantenimientos personalizados y tradicionales
+    if (widget.bus.mantenimientoPreventivo != null) {
+      for (final mantenimiento
+          in widget.bus.mantenimientoPreventivo!.historialMantenimientos) {
+        if (_debeIncluirMantenimiento(mantenimiento)) {
+          todosLosRegistros.add({
+            'tipo': 'mantenimiento',
+            'fecha': mantenimiento.fechaUltimoCambio,
+            'descripcion': mantenimiento.descripcionTipo,
+            'completada': true,
+            'repuestos': mantenimiento.marcaRepuesto != null
+                ? [mantenimiento.marcaRepuesto!]
+                : [],
+            'data': mantenimiento,
+            'tecnico': mantenimiento.tecnicoResponsable,
+            'observaciones': mantenimiento.observaciones,
+            'kilometraje': mantenimiento.kilometrajeUltimoCambio,
+            'tipoMantenimiento': mantenimiento.tipoMantenimientoEfectivo,
+            'tipoTrabajo':
+                'Mantenimiento ${_getLabelTipoMantenimiento(mantenimiento.tipoMantenimientoEfectivo)}',
+          });
+        }
+      }
+    }
+
+    // Obtener reportes específicos del bus
+    final reportesDelBus =
+        await DataService.getReportesPorBus(widget.bus.patente);
+    for (final reporte in reportesDelBus) {
+      if (_debeIncluirReporte(reporte)) {
+        todosLosRegistros.add({
+          'tipo': 'reporte',
+          'fecha': reporte.fecha,
+          'descripcion':
+              'Reporte ${reporte.numeroReporte} - ${reporte.tipoTrabajoDisplay}',
+          'completada': true,
+          'repuestos': <String>[],
+          'data': reporte,
+          'autor': reporte.autor,
+          'numeroReporte': reporte.numeroReporte,
+          'tipoTrabajo': reporte.tipoTrabajoDisplay,
+          'observaciones': reporte.observaciones,
+        });
+      }
+    }
+
+    // Ordenar por fecha descendente
+    todosLosRegistros.sort(
+        (a, b) => (b['fecha'] as DateTime).compareTo(a['fecha'] as DateTime));
+
+    return todosLosRegistros;
+  }
+
+  bool _debeIncluirMantenimiento(RegistroMantenimiento mantenimiento) {
+    // Filtrar por tipo de actividad
+    if (_filtroTipo != 'Todos' && _filtroTipo != 'Mantenimiento') return false;
+
+    // Los mantenimientos siempre están completados
+    if (_filtroEstado == 'En Progreso') return false;
+
+    // ✅ NUEVO: Filtrar por tipo de mantenimiento
+    if (_filtroTipoMantenimiento != 'Todos') {
+      final tipoRequerido =
+          _getTipoMantenimientoFromString(_filtroTipoMantenimiento);
+      if (tipoRequerido != null &&
+          mantenimiento.tipoMantenimientoEfectivo != tipoRequerido) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  bool _debeIncluirReporte(ReporteDiario reporte) {
+    // Filtrar por tipo de actividad
+    if (_filtroTipo != 'Todos' && _filtroTipo != 'Reporte') return false;
+
+    // Los reportes siempre están completados
+    if (_filtroEstado == 'En Progreso') return false;
+
+    // Filtrar por tipo de trabajo específico
+    if (_filtroTipoTrabajo != 'Todos' &&
+        _filtroTipoTrabajo != reporte.tipoTrabajoDisplay) return false;
+
+    return true;
+  }
+
+  Widget _buildRegistroCard(Map<String, dynamic> registro) {
+    final String tipo = registro['tipo'];
+    final DateTime fecha = registro['fecha'];
+    final String descripcion = registro['descripcion'];
+    final bool completada = registro['completada'];
+    final List<String> repuestos =
+        List<String>.from(registro['repuestos'] ?? []);
+    final String tipoTrabajo = registro['tipoTrabajo'] ?? 'Sin Categorizar';
+
+    Color tipoColor;
+    IconData tipoIcon;
+    String tipoLabel;
+
+    if (tipo == 'mantenimiento') {
+      final TipoMantenimiento tipoMant =
+          registro['tipoMantenimiento'] ?? TipoMantenimiento.preventivo;
+      tipoColor = _getColorTipoMantenimiento(tipoMant);
+      tipoIcon = _getIconTipoMantenimiento(tipoMant);
+      tipoLabel = _getLabelTipoMantenimiento(tipoMant).toUpperCase();
+    } else if (tipo == 'reporte') {
+      final ReporteDiario reporteData = registro['data'] as ReporteDiario;
+      tipoColor = reporteData.colorTipoTrabajo;
+      tipoIcon = reporteData.iconoTipoTrabajo;
+      tipoLabel = 'REPORTE';
+    } else {
+      tipoColor = Colors.grey;
+      tipoIcon = Icons.help;
+      tipoLabel = 'DESCONOCIDO';
+    }
+
+    return Card(
+      margin: EdgeInsets.only(bottom: 8),
+      child: ExpansionTile(
+        leading: Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: tipoColor,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(tipoIcon, color: Colors.white, size: 20),
+        ),
+        title: Text(
+          descripcion,
+          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: tipoColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    tipoLabel,
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+                SizedBox(width: 8),
+                // Chip para el tipo específico
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: tipoColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: tipoColor.withOpacity(0.5)),
+                  ),
+                  child: Text(
+                    tipoTrabajo,
+                    style: TextStyle(
+                      color: tipoColor,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                SizedBox(width: 4),
+                Text(ChileanUtils.formatDate(fecha),
+                    style: TextStyle(fontSize: 12)),
+                if (registro['kilometraje'] != null) ...[
+                  SizedBox(width: 12),
+                  Icon(Icons.speed, size: 14, color: Colors.grey[600]),
+                  SizedBox(width: 4),
+                  Text('${registro['kilometraje'].round()} km',
+                      style: TextStyle(fontSize: 12)),
+                ],
+              ],
+            ),
+          ],
+        ),
+        trailing: Icon(
+          completada ? Icons.check_circle : Icons.schedule,
+          color: completada ? Colors.green : Colors.orange,
+        ),
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _buildRegistroDetails(registro, tipo, tipoColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildRegistroDetails(
+      Map<String, dynamic> registro, String tipo, Color tipoColor) {
+    List<Widget> details = [];
+
+    // Información específica según el tipo
+    if (tipo == 'mantenimiento') {
+      final RegistroMantenimiento mantenimiento =
+          registro['data'] as RegistroMantenimiento;
+      details.add(
+        Row(
+          children: [
+            Icon(Icons.speed, size: 16, color: Colors.grey[600]),
+            SizedBox(width: 8),
+            Text(
+                'Kilometraje: ${mantenimiento.kilometrajeUltimoCambio.round()} km'),
+          ],
+        ),
+      );
+
+      if (registro['tecnico'] != null) {
+        details.add(SizedBox(height: 4));
+        details.add(
+          Row(
+            children: [
+              Icon(Icons.person, size: 16, color: Colors.grey[600]),
+              SizedBox(width: 8),
+              Text('Técnico: ${registro['tecnico']}'),
+            ],
+          ),
+        );
+      }
+
+      // ✅ NUEVO: Mostrar tipo de mantenimiento
+      details.add(SizedBox(height: 4));
+      details.add(
+        Row(
+          children: [
+            Icon(
+                _getIconTipoMantenimiento(
+                    mantenimiento.tipoMantenimientoEfectivo),
+                size: 16,
+                color: _getColorTipoMantenimiento(
+                    mantenimiento.tipoMantenimientoEfectivo)),
+            SizedBox(width: 8),
+            Text(
+                'Tipo: ${_getLabelTipoMantenimiento(mantenimiento.tipoMantenimientoEfectivo)}'),
+          ],
+        ),
+      );
+    } else if (tipo == 'reporte') {
+      final ReporteDiario reporte = registro['data'] as ReporteDiario;
+      details.add(
+        Row(
+          children: [
+            Icon(Icons.assignment, size: 16, color: Colors.grey[600]),
+            SizedBox(width: 8),
+            Text('Reporte N° ${reporte.numeroReporte}'),
+          ],
+        ),
+      );
+      details.add(SizedBox(height: 4));
+      details.add(
+        Row(
+          children: [
+            Icon(Icons.person, size: 16, color: Colors.grey[600]),
+            SizedBox(width: 8),
+            Text('Autor: ${reporte.autor}'),
+          ],
+        ),
+      );
+    }
+
+    // Observaciones
+    if (registro['observaciones'] != null) {
+      details.add(SizedBox(height: 8));
+      details.add(
+        Text(
+          tipo == 'reporte'
+              ? 'Detalle del trabajo realizado:'
+              : 'Observaciones:',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        ),
+      );
+      details.add(SizedBox(height: 4));
+      details.add(
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Text(
+            '${registro['observaciones']}',
+            style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+            maxLines: tipo == 'reporte' ? null : 3,
+            overflow: tipo == 'reporte' ? null : TextOverflow.ellipsis,
+          ),
+        ),
+      );
+    }
+
+    // Repuestos utilizados
+    final List<String> repuestos =
+        List<String>.from(registro['repuestos'] ?? []);
+    if (repuestos.isNotEmpty) {
+      details.add(SizedBox(height: 12));
+      details.add(
+        Text(
+          'Repuestos/Materiales utilizados:',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        ),
+      );
+      details.add(SizedBox(height: 8));
+      details.add(
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: repuestos
+              .map((repuesto) => Chip(
+                    label: Text(repuesto, style: TextStyle(fontSize: 11)),
+                    backgroundColor: tipoColor.withOpacity(0.1),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ))
+              .toList(),
+        ),
+      );
+    }
+
+    return details;
+  }
+
+  Widget _buildStatItem(
+      String label, String value, IconData icon, Color color) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 20),
+        SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+          textAlign: TextAlign.center,
+          maxLines: 2,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.history, size: 48, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'No hay registros de actividades',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Los mantenimientos y reportes aparecerán aquí cuando se registren',
+            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<Map<String, int>> _getEstadisticasCompletas() async {
+    final reportesDelBus =
+        await DataService.getReportesPorBus(widget.bus.patente);
+
+    final estadisticasMantenimiento =
+        widget.bus.estadisticasMantenimientosPorTipo;
+
+    final totalCorrectivos =
+        estadisticasMantenimiento[TipoMantenimiento.correctivo] ?? 0;
+    final totalRutinarios =
+        estadisticasMantenimiento[TipoMantenimiento.rutinario] ?? 0;
+    final totalPreventivos =
+        estadisticasMantenimiento[TipoMantenimiento.preventivo] ?? 0;
+    final totalReportes = reportesDelBus.length;
+    final totalCompleto =
+        totalCorrectivos + totalRutinarios + totalPreventivos + totalReportes;
+
+    final completados =
+        totalCorrectivos + totalRutinarios + totalPreventivos + totalReportes;
+
+    return {
+      'total': totalCompleto,
+      'preventivos': totalPreventivos,
+      'correctivos': totalCorrectivos,
+      'rutinarios': totalRutinarios,
+      'reportes': totalReportes,
+      'completados': completados,
+    };
+  }
+
+  // ✅ NUEVOS MÉTODOS para tipos de mantenimiento
+  TipoMantenimiento? _getTipoMantenimientoFromString(String tipo) {
+    switch (tipo) {
+      case 'Correctivo':
+        return TipoMantenimiento.correctivo;
+      case 'Rutinario':
+        return TipoMantenimiento.rutinario;
+      case 'Preventivo':
+        return TipoMantenimiento.preventivo;
+      default:
+        return null;
+    }
+  }
+
+  String _getLabelTipoMantenimiento(TipoMantenimiento tipo) {
+    switch (tipo) {
+      case TipoMantenimiento.correctivo:
+        return 'Correctivo';
+      case TipoMantenimiento.rutinario:
+        return 'Rutinario';
+      case TipoMantenimiento.preventivo:
+        return 'Preventivo';
+    }
+  }
+
+  Color _getColorTipoMantenimiento(TipoMantenimiento tipo) {
+    switch (tipo) {
+      case TipoMantenimiento.correctivo:
+        return Color(0xFFE53E3E);
+      case TipoMantenimiento.rutinario:
+        return Color(0xFF3182CE);
+      case TipoMantenimiento.preventivo:
+        return Color(0xFF38A169);
+    }
+  }
+
+  IconData _getIconTipoMantenimiento(TipoMantenimiento tipo) {
+    switch (tipo) {
+      case TipoMantenimiento.correctivo:
+        return Icons.handyman;
+      case TipoMantenimiento.rutinario:
+        return Icons.schedule;
+      case TipoMantenimiento.preventivo:
+        return Icons.build_circle;
+    }
+  }
+
+  void _limpiarFiltros() {
+    setState(() {
+      _filtroTipo = 'Todos';
+      _filtroEstado = 'Todos';
+      _filtroTipoMantenimiento = 'Todos';
+      _filtroTipoTrabajo = 'Todos';
+    });
+  }
+
+  Future<void> _exportarHistorial() async {
+    // Obtener todos los registros y estadísticas
+    final registros = await _getRegistrosCompletos();
+    final estadisticas = await _getEstadisticasCompletas();
+
+    // Generar HTML del historial
+    final htmlContent = _generarHTMLHistorial(registros, estadisticas);
+
+    // Enviar directamente a cola de impresión
+    _abrirVentanaImpresion(htmlContent);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.print, color: Colors.white),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                  'Enviando a cola de impresión. Puedes guardar como PDF desde el diálogo de impresión.'),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        duration: Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _abrirVentanaImpresion(String htmlContent) {
+    if (kIsWeb) {
+      // Crear un blob con el contenido HTML
+      final blob = html.Blob([htmlContent], 'text/html');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      // Abrir la ventana con el HTML como blob URL
+      final printWindowBase =
+          html.window.open(url, 'PRINT', 'height=600,width=800');
+
+      if (printWindowBase != null) {
+        // Cast explícito de WindowBase a Window para acceder a print()
+        final printWindow = printWindowBase as html.Window;
+
+        // Esperar a que cargue el documento y luego imprimir
+        Future.delayed(Duration(milliseconds: 1000), () {
+          printWindow.print();
+          // Revocar el URL del blob después de imprimir
+          html.Url.revokeObjectUrl(url);
+        });
+      }
+    }
+  }
+
+  String _generarHTMLHistorial(
+      List<Map<String, dynamic>> registros, Map<String, int> estadisticas) {
+    final fechaActual = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
+    final bus = widget.bus;
+
+    // Generar filas de la tabla de registros
+    String filasHTML = '';
+    for (final registro in registros) {
+      final tipo = registro['tipo'];
+      final fecha =
+          DateFormat('dd/MM/yyyy').format(registro['fecha'] as DateTime);
+      final descripcion = registro['descripcion'] ?? '';
+      final tipoTrabajo = registro['tipoTrabajo'] ?? 'Sin Categorizar';
+      final observaciones = registro['observaciones'] ?? 'Sin observaciones';
+
+      String tipoLabel;
+      String tipoColor;
+
+      if (tipo == 'mantenimiento') {
+        final TipoMantenimiento tipoMant =
+            registro['tipoMantenimiento'] ?? TipoMantenimiento.preventivo;
+        tipoLabel = _getLabelTipoMantenimiento(tipoMant);
+        tipoColor = _getColorHTMLTipoMantenimiento(tipoMant);
+      } else {
+        tipoLabel = 'Reporte';
+        final ReporteDiario reporteData = registro['data'] as ReporteDiario;
+        tipoColor = _getColorHTMLFromColor(reporteData.colorTipoTrabajo);
+      }
+
+      String detallesAdicionales = '';
+      if (registro['kilometraje'] != null) {
+        detallesAdicionales += '${registro['kilometraje'].round()} km';
+      }
+      if (registro['tecnico'] != null) {
+        if (detallesAdicionales.isNotEmpty) detallesAdicionales += ' | ';
+        detallesAdicionales += 'Técnico: ${registro['tecnico']}';
+      }
+      if (registro['autor'] != null) {
+        if (detallesAdicionales.isNotEmpty) detallesAdicionales += ' | ';
+        detallesAdicionales += 'Autor: ${registro['autor']}';
+      }
+
+      filasHTML += '''
+        <tr>
+          <td>$fecha</td>
+          <td>
+            <span class="badge" style="background-color: $tipoColor;">$tipoLabel</span>
+          </td>
+          <td>$descripcion</td>
+          <td>$tipoTrabajo</td>
+          <td style="font-size: 11px;">$detallesAdicionales</td>
+          <td style="font-size: 11px; max-width: 200px;">$observaciones</td>
+        </tr>
+      ''';
+    }
+
+    return '''
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Historial Completo - ${bus.identificadorDisplay}</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          color: #2C3E50;
+          padding: 20px;
+          background: white;
+        }
+
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          background: white;
+        }
+
+        .header {
+          text-align: center;
+          padding: 20px 0;
+          border-bottom: 3px solid #1565C0;
+          margin-bottom: 30px;
+        }
+
+        .header h1 {
+          color: #1565C0;
+          font-size: 28px;
+          margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+          color: #555;
+          font-size: 14px;
+          margin: 5px 0;
+        }
+
+        .bus-info {
+          background: #E3F2FD;
+          padding: 15px;
+          border-radius: 8px;
+          margin-bottom: 25px;
+          border-left: 4px solid #1565C0;
+        }
+
+        .bus-info h2 {
+          color: #1565C0;
+          font-size: 18px;
+          margin-bottom: 10px;
+        }
+
+        .bus-info-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 15px;
+        }
+
+        .bus-info-item {
+          padding: 8px;
+          background: white;
+          border-radius: 5px;
+        }
+
+        .info-label {
+          font-size: 11px;
+          color: #666;
+          margin-bottom: 3px;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        .info-value {
+          font-size: 14px;
+          color: #2C3E50;
+          font-weight: bold;
+        }
+
+        .estadisticas {
+          margin-bottom: 25px;
+          padding: 15px;
+          background: #f8f9fa;
+          border-radius: 8px;
+        }
+
+        .estadisticas h2 {
+          color: #1565C0;
+          font-size: 18px;
+          margin-bottom: 15px;
+          border-bottom: 2px solid #1565C0;
+          padding-bottom: 8px;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 10px;
+          text-align: center;
+        }
+
+        .stat-item {
+          padding: 12px;
+          background: white;
+          border-radius: 5px;
+          border: 2px solid #e0e0e0;
+        }
+
+        .stat-value {
+          font-size: 24px;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+
+        .stat-label {
+          font-size: 11px;
+          color: #666;
+          text-transform: uppercase;
+        }
+
+        .registros-section {
+          margin-bottom: 25px;
+        }
+
+        .registros-section h2 {
+          color: #1565C0;
+          font-size: 18px;
+          margin-bottom: 15px;
+          border-bottom: 2px solid #1565C0;
+          padding-bottom: 8px;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 15px 0;
+          background: white;
+          font-size: 12px;
+        }
+
+        th, td {
+          padding: 10px 8px;
+          text-align: left;
+          border: 1px solid #ddd;
+        }
+
+        th {
+          background: #1565C0;
+          color: white;
+          font-weight: 600;
+          font-size: 11px;
+          text-transform: uppercase;
+        }
+
+        tr:nth-child(even) {
+          background: #f8f9fa;
+        }
+
+        .badge {
+          display: inline-block;
+          padding: 3px 8px;
+          border-radius: 4px;
+          color: white;
+          font-size: 10px;
+          font-weight: bold;
+          text-transform: uppercase;
+        }
+
+        .footer {
+          margin-top: 40px;
+          padding-top: 20px;
+          border-top: 2px solid #1565C0;
+          text-align: center;
+          font-size: 11px;
+          color: #666;
+        }
+
+        @media print {
+          body {
+            padding: 10px;
+          }
+
+          .container {
+            max-width: 100%;
+          }
+
+          table {
+            font-size: 10px;
+          }
+
+          th, td {
+            padding: 6px 4px;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>📋 HISTORIAL COMPLETO</h1>
+          <div class="subtitle">Buses Suray - Sistema de Gestión de Flota</div>
+          <div class="subtitle">Generado: $fechaActual</div>
+        </div>
+
+        <!-- Información del Bus -->
+        <div class="bus-info">
+          <h2>🚌 Información del Bus</h2>
+          <div class="bus-info-grid">
+            <div class="bus-info-item">
+              <div class="info-label">Patente</div>
+              <div class="info-value">${bus.patente}</div>
+            </div>
+            <div class="bus-info-item">
+              <div class="info-label">Identificador</div>
+              <div class="info-value">${bus.identificadorDisplay}</div>
+            </div>
+            <div class="bus-info-item">
+              <div class="info-label">Marca/Modelo</div>
+              <div class="info-value">${bus.marca} ${bus.modelo}</div>
+            </div>
+            <div class="bus-info-item">
+              <div class="info-label">Año</div>
+              <div class="info-value">${bus.anio}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="estadisticas">
+          <h2>📊 Estadísticas del Historial</h2>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value" style="color: #2196F3;">${estadisticas['total']}</div>
+              <div class="stat-label">Total Registros</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" style="color: #E53E3E;">${estadisticas['correctivos']}</div>
+              <div class="stat-label">Correctivos</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" style="color: #3182CE;">${estadisticas['rutinarios']}</div>
+              <div class="stat-label">Rutinarios</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" style="color: #38A169;">${estadisticas['preventivos']}</div>
+              <div class="stat-label">Preventivos</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" style="color: #9C27B0;">${estadisticas['reportes']}</div>
+              <div class="stat-label">Reportes</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" style="color: #009688;">${estadisticas['completados']}</div>
+              <div class="stat-label">Completados</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla de Registros -->
+        <div class="registros-section">
+          <h2>📑 Detalle de Registros</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Descripción</th>
+                <th>Categoría</th>
+                <th>Detalles</th>
+                <th>Observaciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              $filasHTML
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer">
+          <p><strong>Sistema de Gestión de Buses Suray</strong></p>
+          <p>Reporte generado automáticamente - ${bus.identificadorDisplay}</p>
+          <p>Fecha de generación: $fechaActual</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    ''';
+  }
+
+  String _getColorHTMLTipoMantenimiento(TipoMantenimiento tipo) {
+    switch (tipo) {
+      case TipoMantenimiento.correctivo:
+        return '#E53E3E';
+      case TipoMantenimiento.rutinario:
+        return '#3182CE';
+      case TipoMantenimiento.preventivo:
+        return '#38A169';
+    }
+  }
+
+  String _getColorHTMLFromColor(Color color) {
+    return '#${color.value.toRadixString(16).substring(2, 8)}';
+  }
+}
