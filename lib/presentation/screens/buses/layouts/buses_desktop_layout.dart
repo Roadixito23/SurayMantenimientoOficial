@@ -5,6 +5,7 @@ import '../../../../services/data_service.dart';
 import '../../../../services/chilean_utils.dart';
 import '../../../../main.dart';
 import '../../../widgets/buses/buses_widgets.dart';
+import '../../../dialogs/ver_estado_mantenimiento/ver_estado_mantenimiento_dialog.dart';
 
 // =====================================================================
 // === BUSES DESKTOP LAYOUT ===========================================
@@ -97,7 +98,8 @@ class _BusesDesktopLayoutState extends State<BusesDesktopLayout> {
       150.0, // Km Ideal
       150.0, // Fecha Ideal
       160.0, // Revisión Técnica
-      200.0  // Ubicación
+      200.0, // Ubicación
+      120.0, // Acciones
     ];
 
     final totalWidth = columnWidths.reduce((a, b) => a + b);
@@ -229,6 +231,7 @@ class _BusesDesktopLayoutState extends State<BusesDesktopLayout> {
       _HeaderCell('Fecha Ideal', 150),
       _HeaderCell('Revisión Técnica', 160),
       _HeaderCell('Ubicación', 200),
+      _HeaderCell('Acciones', 120),
     ];
 
     return Container(
@@ -397,6 +400,7 @@ class _BusTableRowState extends State<_BusTableRow> {
               _fechaIdealCell(widget.bus, 150),
               _revisionTecnicaCell(widget.bus, 160),
               _dataCell(widget.bus.ubicacionActual ?? '-', 200),
+              _accionesCell(context, widget.bus, 120),
             ],
           ),
         ),
@@ -621,5 +625,66 @@ class _BusTableRowState extends State<_BusTableRow> {
   String _formatKilometraje(double km) {
     final formatador = NumberFormat("#,##0", "es_CL");
     return formatador.format(km);
+  }
+
+  Widget _accionesCell(BuildContext context, Bus bus, double width) {
+    final tieneAlertas = bus.tieneMantenimientosVencidos || bus.tieneMantenimientosUrgentes;
+    
+    return Container(
+      width: width,
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: SurayColors.grisAntracita.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: tieneAlertas
+          ? Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFE53935), Color(0xFFB71C1C)],
+                ),
+                borderRadius: BorderRadius.circular(6),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    VerEstadoMantenimientoDialog.show(context, bus: bus);
+                  },
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.warning_amber, size: 14, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text(
+                          'Ver estado',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : SizedBox.shrink(),
+    );
   }
 }

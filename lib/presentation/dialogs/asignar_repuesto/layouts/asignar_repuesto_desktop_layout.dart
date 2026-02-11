@@ -648,6 +648,23 @@ class _AsignarRepuestoDesktopLayoutState
               ),
             ],
           ),
+          SizedBox(height: 12),
+          // Botón de eliminar
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _eliminarAsignado(asignado, catalogo),
+              icon: Icon(Icons.delete, size: 20),
+              label: Text('Eliminar Asignación'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                padding: EdgeInsets.symmetric(vertical: 16),
+                side: BorderSide(color: Colors.red),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -754,6 +771,110 @@ class _AsignarRepuestoDesktopLayoutState
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  void _eliminarAsignado(
+      RepuestoAsignado asignado, RepuestoCatalogo catalogo) async {
+    final confirmacion = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 12),
+            Text('Eliminar Asignación'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Estás seguro de que quieres eliminar esta asignación?',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 12),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(_getSistemaIcon(catalogo.sistema),
+                          size: 20, color: _getSistemaColor(catalogo.sistema)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          catalogo.nombre,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Text('Bus: ${widget.bus.patente}',
+                      style: TextStyle(fontSize: 12)),
+                  Text('Cantidad: ${asignado.cantidad} uds',
+                      style: TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Esta acción no se puede deshacer.',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.red[700],
+                  fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmacion == true) {
+      try {
+        await DataService.deleteRepuestoAsignado(asignado.id);
+        _cargarRepuestosAsignados();
+        setState(() {
+          _asignadoSeleccionado = null;
+          _catalogoAsignadoSeleccionado = null;
+        });
+        widget.onRepuestoAsignado?.call();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Asignación eliminada correctamente'),
+            backgroundColor: _accentColor,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Error al eliminar: $e'),
+              backgroundColor: Colors.red),
         );
       }
     }

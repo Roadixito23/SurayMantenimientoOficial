@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../models/bus.dart';
 import '../../../services/chilean_utils.dart';
 import '../../../main.dart';
+import '../../dialogs/ver_estado_mantenimiento/ver_estado_mantenimiento_dialog.dart';
 
 // =====================================================================
 // === WIDGETS COMPARTIDOS - Pantalla de Buses =========================
@@ -283,6 +284,48 @@ class BusCard extends StatelessWidget {
                           color: bus.tieneMantenimientosVencidos
                               ? Colors.red
                               : SurayColors.naranjaQuemado,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      // Botón Ver Estado
+                      GestureDetector(
+                        onTap: () {
+                          VerEstadoMantenimientoDialog.show(context, bus: bus);
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xFFE53935), Color(0xFFB71C1C)],
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.red.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.visibility,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Ver estado',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],

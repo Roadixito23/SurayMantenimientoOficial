@@ -649,6 +649,40 @@ class DataService {
     }).toList();
   }
 
+  /// Obtiene las vinculaciones de un repuesto (buses que lo tienen asignado)
+  static Future<List<Map<String, dynamic>>> getVinculacionesRepuesto(
+      String repuestoCatalogoId) async {
+    final todosRepuestos = await getRepuestosAsignados();
+    final buses = await getBuses();
+    
+    final vinculaciones = todosRepuestos
+        .where((r) => r.repuestoCatalogoId == repuestoCatalogoId)
+        .map((repuestoAsignado) {
+      final bus = buses.firstWhere(
+        (b) => b.id == repuestoAsignado.busId,
+        orElse: () => Bus(
+          id: 'unknown',
+          patente: 'Desconocido',
+          marca: 'N/A',
+          modelo: 'N/A',
+          anio: 0,
+          estado: EstadoBus.fueraDeServicio,
+          fechaRegistro: DateTime.now(),
+        ),
+      );
+      
+      return {
+        'asignadoId': repuestoAsignado.id,
+        'busId': bus.id,
+        'busPatente': bus.patente,
+        'cantidad': repuestoAsignado.cantidad,
+        'instalado': repuestoAsignado.instalado,
+      };
+    }).toList();
+    
+    return vinculaciones;
+  }
+
   // =============================================================================
   // MÉTODOS PARA REPORTES (SIN CAMBIOS)
   // =============================================================================

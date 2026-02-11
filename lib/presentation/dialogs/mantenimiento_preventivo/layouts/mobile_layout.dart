@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../../../../models/bus.dart';
 import '../../../../models/mantenimiento_preventivo.dart';
 import '../../../../models/tipo_mantenimiento_personalizado.dart';
 import '../../../../services/data_service.dart';
-import '../../../../services/chilean_utils.dart';
-import '../../../../widgets/tipo_mantenimiento_selector.dart';
 import '../../../../main.dart';
 
 class MantenimientoPreventivoMobileLayout extends StatefulWidget {
@@ -28,15 +27,68 @@ class _MantenimientoPreventivoMobileLayoutState
   late TextEditingController _tecnicoController;
   late TextEditingController _observacionesController;
   late TextEditingController _marcaRepuestoController;
+  late TextEditingController _alarmaKmController;
+  late TextEditingController _tituloPersonalizadoController;
+  late TextEditingController _fechaController;
 
   TipoMantenimiento _tipoMantenimiento = TipoMantenimiento.preventivo;
   String _tituloMantenimiento = '';
-  String? _descripcionMantenimiento;
 
   TipoMotor _tipoMotor = TipoMotor.diesel;
   bool _isLoading = false;
-
+  bool _configurarAlarma = false;
   DateTime _fechaMantenimiento = DateTime.now();
+
+  final List<Map<String, dynamic>> _tiposMantenimiento = [
+    {
+      'titulo': 'Filtro de Aceite',
+      'icon': Icons.opacity,
+      'color': Color(0xFFFF9800),
+      'tipo': TipoMantenimiento.preventivo
+    },
+    {
+      'titulo': 'Filtro de Aire',
+      'icon': Icons.air,
+      'color': Color(0xFF2196F3),
+      'tipo': TipoMantenimiento.preventivo
+    },
+    {
+      'titulo': 'Filtro de Combustible',
+      'icon': Icons.local_gas_station,
+      'color': Color(0xFF4CAF50),
+      'tipo': TipoMantenimiento.preventivo
+    },
+    {
+      'titulo': 'Cambio de Aceite',
+      'icon': Icons.water_drop,
+      'color': Color(0xFF795548),
+      'tipo': TipoMantenimiento.preventivo
+    },
+    {
+      'titulo': 'Frenos',
+      'icon': Icons.pan_tool,
+      'color': Color(0xFFE53935),
+      'tipo': TipoMantenimiento.correctivo
+    },
+    {
+      'titulo': 'Neumáticos',
+      'icon': Icons.tire_repair,
+      'color': Color(0xFF424242),
+      'tipo': TipoMantenimiento.rutinario
+    },
+    {
+      'titulo': 'Batería',
+      'icon': Icons.battery_charging_full,
+      'color': Color(0xFF9C27B0),
+      'tipo': TipoMantenimiento.correctivo
+    },
+    {
+      'titulo': 'Otro',
+      'icon': Icons.more_horiz,
+      'color': Color(0xFF607D8B),
+      'tipo': TipoMantenimiento.preventivo
+    },
+  ];
 
   @override
   void initState() {
@@ -44,6 +96,16 @@ class _MantenimientoPreventivoMobileLayoutState
     _tecnicoController = TextEditingController();
     _observacionesController = TextEditingController();
     _marcaRepuestoController = TextEditingController();
+    _alarmaKmController = TextEditingController(text: '5000');
+    _tituloPersonalizadoController = TextEditingController();
+    _fechaController = TextEditingController();
+
+    // Prellenar con fecha actual en formato dd/mm/aa
+    final now = DateTime.now();
+    final d = now.day.toString().padLeft(2, '0');
+    final m = now.month.toString().padLeft(2, '0');
+    final a = (now.year % 100).toString().padLeft(2, '0');
+    _fechaController.text = '$d/$m/$a';
 
     if (widget.bus.mantenimientoPreventivo != null) {
       _tipoMotor = widget.bus.mantenimientoPreventivo!.tipoMotor;
@@ -55,43 +117,19 @@ class _MantenimientoPreventivoMobileLayoutState
     _tecnicoController.dispose();
     _observacionesController.dispose();
     _marcaRepuestoController.dispose();
+    _alarmaKmController.dispose();
+    _tituloPersonalizadoController.dispose();
+    _fechaController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Registrar Mantenimiento',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              widget.bus.identificadorDisplay,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
-            ),
-          ],
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                SurayColors.azulMarinoProfundo,
-                SurayColors.azulMarinoProfundo.withOpacity(0.8)
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        elevation: 0,
-      ),
+      backgroundColor: Colors.grey[100],
       body: Column(
         children: [
+          _buildHeader(),
           Expanded(
             child: Form(
               key: _formKey,
@@ -100,508 +138,518 @@ class _MantenimientoPreventivoMobileLayoutState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Estado actual del bus
-                    _buildEstadoActualWidget(),
-                    SizedBox(height: 20),
-
-                    // Selector de tipo de mantenimiento
-                    Text(
-                      'Tipo de Mantenimiento',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: SurayColors.grisAntracita,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-
-                    TipoMantenimientoSelector(
-                      tipoMantenimientoInicial: _tipoMantenimiento,
-                      tituloInicial: _tituloMantenimiento,
-                      descripcionInicial: _descripcionMantenimiento,
-                      onChanged: (tipoBase, titulo, descripcion) {
-                        setState(() {
-                          _tipoMantenimiento = tipoBase;
-                          _tituloMantenimiento = titulo;
-                          _descripcionMantenimiento = descripcion;
-                        });
-                      },
-                    ),
-
-                    SizedBox(height: 20),
-
-                    // Último mantenimiento
-                    _buildUltimoMantenimientoWidget(),
-
-                    SizedBox(height: 20),
-
-                    // Fecha del mantenimiento
-                    Text(
-                      'Fecha del Mantenimiento',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: SurayColors.grisAntracita,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-
-                    InkWell(
-                      onTap: _seleccionarFechaMantenimiento,
-                      child: Container(
-                        padding: EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.calendar_today,
-                                color: SurayColors.azulMarinoProfundo),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Fecha del mantenimiento',
-                                    style: TextStyle(
-                                        fontSize: 11, color: Colors.grey[600]),
-                                  ),
-                                  SizedBox(height: 2),
-                                  Text(
-                                    ChileanUtils.formatDate(
-                                        _fechaMantenimiento),
-                                    style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(Icons.edit, color: Colors.grey[400], size: 20),
-                          ],
-                        ),
-                      ),
-                    ),
-
+                    _buildTipoMantenimientoGrid(),
                     SizedBox(height: 16),
-
-                    // Técnico responsable
-                    TextFormField(
-                      controller: _tecnicoController,
-                      decoration: InputDecoration(
-                        labelText: 'Técnico Responsable',
-                        prefixIcon: Icon(Icons.person),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                              color: SurayColors.azulMarinoProfundo, width: 2),
-                        ),
-                      ),
-                      textCapitalization: TextCapitalization.words,
-                    ),
-
+                    if (_tituloMantenimiento == 'Otro') ...[
+                      _buildCampoPersonalizado(),
+                      SizedBox(height: 16),
+                    ],
+                    _buildFormulario(),
                     SizedBox(height: 16),
-
-                    // Marca del repuesto
-                    TextFormField(
-                      controller: _marcaRepuestoController,
-                      decoration: InputDecoration(
-                        labelText: 'Marca del Repuesto/Material',
-                        hintText: 'Ej: Mann Filter, Bosch...',
-                        hintStyle: TextStyle(fontSize: 13),
-                        prefixIcon: Icon(Icons.branding_watermark),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                              color: SurayColors.azulMarinoProfundo, width: 2),
-                        ),
-                      ),
-                      textCapitalization: TextCapitalization.words,
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Observaciones
-                    TextFormField(
-                      controller: _observacionesController,
-                      decoration: InputDecoration(
-                        labelText: 'Observaciones',
-                        hintText: 'Detalles del mantenimiento...',
-                        hintStyle: TextStyle(fontSize: 13),
-                        prefixIcon: Icon(Icons.note),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                              color: SurayColors.azulMarinoProfundo, width: 2),
-                        ),
-                        alignLabelWithHint: true,
-                      ),
-                      maxLines: 4,
-                    ),
-
-                    SizedBox(height: 20),
+                    _buildAlarmaSection(),
+                    SizedBox(height: 100),
                   ],
                 ),
               ),
             ),
           ),
-
-          // Botones de acción fijos
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: Offset(0, -2),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed:
-                          _isLoading ? null : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.grey[400]!),
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Cancelar',
-                        style: TextStyle(color: Colors.grey[700], fontSize: 15),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _registrarMantenimiento,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: SurayColors.azulMarinoProfundo,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: _isLoading
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : Text(
-                              'Registrar',
-                              style: TextStyle(
-                                  fontSize: 15, fontWeight: FontWeight.bold),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildBottomBar(),
         ],
       ),
     );
   }
 
-  Widget _buildEstadoActualWidget() {
+  Widget _buildHeader() {
+    final formatador = NumberFormat("#,##0", "es_CL");
+
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 12,
+        left: 16,
+        right: 16,
+        bottom: 16,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue[50]!, Colors.blue[100]!.withOpacity(0.3)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          colors: [SurayColors.azulMarinoProfundo, SurayColors.azulMarinoClaro],
         ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue[200]!),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue[700],
-                  borderRadius: BorderRadius.circular(8),
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: Icon(Icons.arrow_back, color: Colors.white),
+            style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.1)),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Registrar Mantenimiento',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                child:
-                    Icon(Icons.directions_bus, color: Colors.white, size: 20),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                SizedBox(height: 2),
+                Row(
                   children: [
                     Text(
                       widget.bus.identificadorDisplay,
                       style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: Colors.blue[900]),
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 13,
+                      ),
                     ),
-                    Text(
-                      '${widget.bus.marca} ${widget.bus.modelo}',
-                      style: TextStyle(fontSize: 12, color: Colors.blue[700]),
-                    ),
+                    if (widget.bus.kilometraje != null) ...[
+                      Text(' • ',
+                          style:
+                              TextStyle(color: Colors.white.withOpacity(0.6))),
+                      Icon(Icons.speed,
+                          size: 12, color: Colors.white.withOpacity(0.8)),
+                      SizedBox(width: 3),
+                      Text(
+                        '${formatador.format(widget.bus.kilometraje!)} km',
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(0.9), fontSize: 13),
+                      ),
+                    ],
                   ],
-                ),
-              ),
-              _buildEstadoChip(),
-            ],
-          ),
-          if (widget.bus.kilometraje != null) ...[
-            SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.speed, size: 16, color: Colors.blue[700]),
-                SizedBox(width: 6),
-                Text(
-                  'Kilometraje: ${widget.bus.kilometraje!.round()} km',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
-          ],
-          if (widget.bus.totalMantenimientosRealizados > 0) ...[
-            SizedBox(height: 12),
-            Text(
-              'Historial:',
-              style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
-                  color: Colors.blue[700]),
-            ),
-            SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: widget.bus.estadisticasMantenimientosPorTipo.entries
-                  .map((entry) {
-                if (entry.value == 0) return SizedBox.shrink();
-                return Chip(
-                  avatar: Icon(_getIconoTipo(entry.key),
-                      size: 12, color: Colors.white),
-                  label: Text(
-                    '${_getLabelTipo(entry.key)}: ${entry.value}',
-                    style: TextStyle(color: Colors.white, fontSize: 10),
-                  ),
-                  backgroundColor: _getColorTipo(entry.key),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                );
-              }).toList(),
-            ),
-          ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildEstadoChip() {
-    Color color;
-    String label;
-    IconData icon;
-
-    switch (widget.bus.estado) {
-      case EstadoBus.disponible:
-        color = Colors.green;
-        label = 'Disponible';
-        icon = Icons.check_circle;
-        break;
-      case EstadoBus.enReparacion:
-        color = Colors.orange;
-        label = 'En Reparación';
-        icon = Icons.build;
-        break;
-      case EstadoBus.fueraDeServicio:
-        color = Colors.red;
-        label = 'Fuera de Servicio';
-        icon = Icons.cancel;
-        break;
-    }
-
-    return Chip(
-      avatar: Icon(icon, size: 14, color: Colors.white),
-      label: Text(label, style: TextStyle(color: Colors.white, fontSize: 10)),
-      backgroundColor: color,
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    );
-  }
-
-  Widget _buildUltimoMantenimientoWidget() {
-    final ultimoMantenimiento = widget.bus.ultimoMantenimiento;
-
-    if (ultimoMantenimiento == null) {
-      return Container(
-        padding: EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.info_outline, color: Colors.grey[600], size: 20),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Sin historial de mantenimientos',
-                style: TextStyle(color: Colors.grey[700], fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
+  Widget _buildTipoMantenimientoGrid() {
     return Container(
-      padding: EdgeInsets.all(12),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.green[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green[200]!),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            'Tipo de Mantenimiento',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: SurayColors.grisAntracita,
+            ),
+          ),
+          SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 0.85,
+            ),
+            itemCount: _tiposMantenimiento.length,
+            itemBuilder: (context, index) {
+              final tipo = _tiposMantenimiento[index];
+              final isSelected = _tituloMantenimiento == tipo['titulo'];
+
+              return InkWell(
+                onTap: () {
+                  setState(() {
+                    _tituloMantenimiento = tipo['titulo'];
+                    _tipoMantenimiento = tipo['tipo'];
+                  });
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: AnimatedContainer(
+                  duration: Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? (tipo['color'] as Color).withOpacity(0.15)
+                        : Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected ? tipo['color'] : Colors.grey[200]!,
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        tipo['icon'],
+                        color: isSelected ? tipo['color'] : Colors.grey[500],
+                        size: 24,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        tipo['titulo'],
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: isSelected ? tipo['color'] : Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCampoPersonalizado() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: _tituloPersonalizadoController,
+        decoration: InputDecoration(
+          labelText: 'Nombre del mantenimiento',
+          hintText: 'Ej: Revisión de suspensión',
+          prefixIcon: Icon(Icons.edit, color: SurayColors.azulMarinoProfundo),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: Colors.grey[50],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormulario() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Detalles',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: SurayColors.grisAntracita,
+            ),
+          ),
+          SizedBox(height: 12),
+
+          // Fecha - Campo de texto dd/mm/aa
+          TextFormField(
+            controller: _fechaController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              _DateInputFormatter(),
+            ],
+            decoration: InputDecoration(
+              labelText: 'Fecha del mantenimiento',
+              hintText: 'dd/mm/aa',
+              helperText: 'Formato: dd/mm/aa (ej: 15/06/26)',
+              prefixIcon: Icon(Icons.calendar_today,
+                  size: 20, color: SurayColors.azulMarinoProfundo),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              filled: true,
+              fillColor: Colors.grey[50],
+            ),
+            onChanged: (value) {
+              final fecha = _parseFechaFromString(value);
+              if (fecha != null) {
+                setState(() => _fechaMantenimiento = fecha);
+              }
+            },
+            validator: (value) {
+              if (value != null && value.isNotEmpty && value.length == 8) {
+                final fecha = _parseFechaFromString(value);
+                if (fecha == null) return 'Fecha inválida';
+              }
+              return null;
+            },
+          ),
+          SizedBox(height: 12),
+
+          // Técnico
+          TextFormField(
+            controller: _tecnicoController,
+            decoration: InputDecoration(
+              labelText: 'Técnico responsable',
+              hintText: 'Nombre del técnico',
+              prefixIcon: Icon(Icons.person, size: 20),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              filled: true,
+              fillColor: Colors.grey[50],
+            ),
+            textCapitalization: TextCapitalization.words,
+          ),
+          SizedBox(height: 12),
+
+          // Marca
+          TextFormField(
+            controller: _marcaRepuestoController,
+            decoration: InputDecoration(
+              labelText: 'Marca/Material (opcional)',
+              hintText: 'Ej: Mann Filter',
+              prefixIcon: Icon(Icons.inventory_2, size: 20),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              filled: true,
+              fillColor: Colors.grey[50],
+            ),
+            textCapitalization: TextCapitalization.words,
+          ),
+          SizedBox(height: 12),
+
+          // Observaciones
+          TextFormField(
+            controller: _observacionesController,
+            decoration: InputDecoration(
+              labelText: 'Observaciones (opcional)',
+              hintText: 'Notas adicionales...',
+              prefixIcon: Padding(
+                padding: EdgeInsets.only(bottom: 24),
+                child: Icon(Icons.notes, size: 20),
+              ),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              filled: true,
+              fillColor: Colors.grey[50],
+              alignLabelWithHint: true,
+            ),
+            maxLines: 2,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlarmaSection() {
+    final kmActual = widget.bus.kilometraje ?? 0.0;
+    final kmAlarmaExtra = double.tryParse(_alarmaKmController.text) ?? 0.0;
+    final kmAlarmaTotal = kmActual + kmAlarmaExtra;
+    final formatador = NumberFormat("#,##0", "es_CL");
+
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _configurarAlarma ? Colors.amber[50] : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: _configurarAlarma ? Colors.amber[300]! : Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
           Row(
             children: [
               Icon(
-                _getIconoTipo(ultimoMantenimiento.tipoMantenimientoEfectivo),
-                color: _getColorTipo(
-                    ultimoMantenimiento.tipoMantenimientoEfectivo),
-                size: 18,
+                Icons.notifications_active,
+                color: _configurarAlarma ? Colors.amber[700] : Colors.grey[500],
+                size: 22,
               ),
-              SizedBox(width: 8),
-              Text(
-                'Último Mantenimiento',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Programar recordatorio',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: _configurarAlarma
+                        ? Colors.amber[800]
+                        : Colors.grey[700],
+                  ),
+                ),
+              ),
+              Switch(
+                value: _configurarAlarma,
+                onChanged: (v) => setState(() => _configurarAlarma = v),
+                activeColor: Colors.amber[700],
               ),
             ],
           ),
-          SizedBox(height: 8),
-          _buildInfoRow('Tipo', ultimoMantenimiento.descripcionTipo),
-          _buildInfoRow('Fecha',
-              ChileanUtils.formatDate(ultimoMantenimiento.fechaUltimoCambio)),
-          _buildInfoRow('Km',
-              '${ultimoMantenimiento.kilometrajeUltimoCambio.round()} km'),
-          if (ultimoMantenimiento.tecnicoResponsable != null)
-            _buildInfoRow('Técnico', ultimoMantenimiento.tecnicoResponsable!),
-          if (ultimoMantenimiento.marcaRepuesto != null)
-            _buildInfoRow('Marca', ultimoMantenimiento.marcaRepuesto!),
+          if (_configurarAlarma) ...[
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _alarmaKmController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: 'En cuántos km',
+                      suffixText: 'km',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[700],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      Text('Alarma en',
+                          style: TextStyle(fontSize: 9, color: Colors.white70)),
+                      Text(
+                        '${formatador.format(kmAlarmaTotal)}',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
+                      ),
+                      Text('km',
+                          style: TextStyle(fontSize: 9, color: Colors.white70)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 60,
-            child: Text(
-              '$label:',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700]),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(fontSize: 11, color: Colors.grey[800]),
-            ),
+  Widget _buildBottomBar() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: Offset(0, -2),
           ),
         ],
       ),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _isLoading ? null : () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  side: BorderSide(color: Colors.grey[400]!),
+                ),
+                child:
+                    Text('Cancelar', style: TextStyle(color: Colors.grey[700])),
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _registrarMantenimiento,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SurayColors.azulMarinoProfundo,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: _isLoading
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check, size: 20),
+                          SizedBox(width: 8),
+                          Text('Registrar',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
-  }
-
-  void _seleccionarFechaMantenimiento() async {
-    final fecha = await showDatePicker(
-      context: context,
-      initialDate: _fechaMantenimiento,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      helpText: 'Fecha del mantenimiento',
-      cancelText: 'Cancelar',
-      confirmText: 'Seleccionar',
-    );
-
-    if (fecha != null) {
-      setState(() {
-        _fechaMantenimiento = fecha;
-      });
-    }
   }
 
   void _registrarMantenimiento() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    if (_tituloMantenimiento.trim().isEmpty) {
+    if (_tituloMantenimiento.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Especifica el título del mantenimiento'),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-        ),
+            content: Text('Selecciona el tipo de mantenimiento'),
+            backgroundColor: Colors.orange),
       );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final kilometrajeReferencia = widget.bus.kilometraje ?? 0.0;
 
       if (widget.bus.mantenimientoPreventivo == null) {
         await DataService.configurarMantenimientoPreventivo(
-          busId: widget.bus.id,
-          tipoMotor: _tipoMotor,
-        );
+            busId: widget.bus.id, tipoMotor: _tipoMotor);
       }
 
       final filtrosCriticos = [
@@ -609,11 +657,24 @@ class _MantenimientoPreventivoMobileLayoutState
         'Filtro de Aire',
         'Filtro de Combustible'
       ];
+      final titulo = _tituloMantenimiento == 'Otro'
+          ? _tituloPersonalizadoController.text.trim()
+          : _tituloMantenimiento;
 
-      if (filtrosCriticos.contains(_tituloMantenimiento.trim())) {
+      if (titulo.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Ingresa el nombre del mantenimiento'),
+              backgroundColor: Colors.orange),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      if (filtrosCriticos.contains(titulo)) {
         await DataService.registrarMantenimientoFiltroCritico(
           busId: widget.bus.id,
-          tituloFiltro: _tituloMantenimiento.trim(),
+          tituloFiltro: titulo,
           kilometrajeActual: kilometrajeReferencia,
           fechaMantenimiento: _fechaMantenimiento,
           tecnicoResponsable: _tecnicoController.text.trim().isEmpty
@@ -629,8 +690,8 @@ class _MantenimientoPreventivoMobileLayoutState
       } else {
         await DataService.registrarMantenimientoPersonalizado(
           busId: widget.bus.id,
-          tituloMantenimiento: _tituloMantenimiento.trim(),
-          descripcionMantenimiento: _descripcionMantenimiento,
+          tituloMantenimiento: titulo,
+          descripcionMantenimiento: null,
           tipoMantenimiento: _tipoMantenimiento,
           kilometrajeActual: kilometrajeReferencia,
           fechaMantenimiento: _fechaMantenimiento,
@@ -647,70 +708,66 @@ class _MantenimientoPreventivoMobileLayoutState
       }
 
       Navigator.pop(context, true);
-
-      final mensaje = filtrosCriticos.contains(_tituloMantenimiento.trim())
-          ? 'Filtro "${_tituloMantenimiento}" registrado con monitoreo automático'
-          : 'Mantenimiento "${_tituloMantenimiento}" registrado';
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(mensaje),
-          backgroundColor: filtrosCriticos.contains(_tituloMantenimiento.trim())
-              ? Colors.orange
-              : Colors.green,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 3),
-        ),
+            content: Text('Mantenimiento "$titulo" registrado'),
+            backgroundColor: Colors.green),
       );
-
       widget.onMantenimientoRegistrado?.call();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  DateTime? _parseFechaFromString(String value) {
+    if (value.length != 8) return null;
+    try {
+      final parts = value.split('/');
+      if (parts.length != 3) return null;
+      final dia = int.parse(parts[0]);
+      final mes = int.parse(parts[1]);
+      int anio = int.parse(parts[2]);
+      anio = anio <= 50 ? 2000 + anio : 1900 + anio;
+      if (dia < 1 || dia > 31 || mes < 1 || mes > 12) return null;
+      final fecha = DateTime(anio, mes, dia);
+      if (fecha.day != dia || fecha.month != mes) return null;
+      return fecha;
+    } catch (e) {
+      return null;
+    }
+  }
+}
+
+/// Formateador de entrada para fechas en formato dd/mm/aa
+class _DateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+
+    // Solo permitir hasta 6 dígitos (ddmmaa)
+    if (text.length > 6) {
+      return oldValue;
+    }
+
+    // Formatear con slashes
+    String formatted = '';
+    for (int i = 0; i < text.length; i++) {
+      if (i == 2 || i == 4) {
+        formatted += '/';
       }
+      formatted += text[i];
     }
-  }
 
-  IconData _getIconoTipo(TipoMantenimiento tipo) {
-    switch (tipo) {
-      case TipoMantenimiento.correctivo:
-        return Icons.handyman;
-      case TipoMantenimiento.rutinario:
-        return Icons.schedule;
-      case TipoMantenimiento.preventivo:
-        return Icons.build_circle;
-    }
-  }
-
-  Color _getColorTipo(TipoMantenimiento tipo) {
-    switch (tipo) {
-      case TipoMantenimiento.correctivo:
-        return Color(0xFFE53E3E);
-      case TipoMantenimiento.rutinario:
-        return Color(0xFF3182CE);
-      case TipoMantenimiento.preventivo:
-        return Color(0xFF38A169);
-    }
-  }
-
-  String _getLabelTipo(TipoMantenimiento tipo) {
-    switch (tipo) {
-      case TipoMantenimiento.correctivo:
-        return 'Correctivo';
-      case TipoMantenimiento.rutinario:
-        return 'Rutinario';
-      case TipoMantenimiento.preventivo:
-        return 'Preventivo';
-    }
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
   }
 }

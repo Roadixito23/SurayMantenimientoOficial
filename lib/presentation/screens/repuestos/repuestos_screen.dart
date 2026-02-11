@@ -315,6 +315,9 @@ class _RepuestosScreenState extends State<RepuestosScreen> {
     final repuesto = await DataService.getRepuestoCatalogoById(id);
     if (repuesto == null) return;
 
+    // Obtener vinculaciones (buses que tienen este repuesto asignado)
+    final vinculaciones = await DataService.getVinculacionesRepuesto(id);
+    
     showDialog(
       context: context,
       barrierColor: SurayColors.azulMarinoProfundo.withOpacity(0.5),
@@ -329,8 +332,80 @@ class _RepuestosScreenState extends State<RepuestosScreen> {
             Expanded(child: Text('Confirmar eliminación')),
           ],
         ),
-        content: Text(
-          '¿Estás seguro de que quieres eliminar ${repuesto.nombre} del catálogo?',
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '¿Estás seguro de que quieres eliminar ${repuesto.nombre} del catálogo?',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              if (vinculaciones.isNotEmpty) ...[
+                SizedBox(height: 16),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.link, size: 20, color: Colors.orange[700]),
+                          SizedBox(width: 8),
+                          Text(
+                            'Vinculaciones (${vinculaciones.length})',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Este repuesto está asignado a:',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                      ),
+                      SizedBox(height: 8),
+                      ...vinculaciones.take(5).map((v) => Padding(
+                        padding: EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            Icon(Icons.directions_bus, size: 14, color: Colors.grey[600]),
+                            SizedBox(width: 6),
+                            Text('${v['busPatente']} (${v['cantidad']} uds)',
+                                style: TextStyle(fontSize: 12)),
+                          ],
+                        ),
+                      )),
+                      if (vinculaciones.length > 5)
+                        Padding(
+                          padding: EdgeInsets.only(top: 4),
+                          child: Text(
+                            'y ${vinculaciones.length - 5} más...',
+                            style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
+                          ),
+                        ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Al eliminar este repuesto, se eliminarán también todas sus asignaciones.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.red[700],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -340,6 +415,12 @@ class _RepuestosScreenState extends State<RepuestosScreen> {
           ElevatedButton(
             onPressed: () async {
               try {
+                // Eliminar todas las asignaciones primero
+                for (var vinculacion in vinculaciones) {
+                  await DataService.deleteRepuestoAsignado(vinculacion['asignadoId']);
+                }
+                
+                // Luego eliminar el repuesto del catálogo
                 await DataService.deleteRepuestoCatalogo(id);
                 Navigator.pop(ctx);
                 _cargarDatos();
@@ -347,7 +428,7 @@ class _RepuestosScreenState extends State<RepuestosScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                        '${repuesto.nombre} eliminado del catálogo'),
+                        '${repuesto.nombre} eliminado del catálogo${vinculaciones.isNotEmpty ? ' y ${vinculaciones.length} asignación(es)' : ''}'),
                     backgroundColor: Colors.green,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(

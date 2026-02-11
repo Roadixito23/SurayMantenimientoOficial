@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart'; // Archivo generado por FlutterFire CLI
 import 'presentation/screens/login/login_screen.dart';
 import 'services/firebase_service.dart';
@@ -71,6 +72,17 @@ class BusManagementApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Sistema de Gestión de Buses - Suray v3.02',
+      // Configuración de localización para español
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: [
+        Locale('es', 'CL'),
+        Locale('es', ''),
+      ],
+      locale: Locale('es', 'CL'),
       // Builder para ajustar el zoom y hacer la app responsive
       builder: (context, child) {
         return MediaQuery(

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../widgets/responsive/responsive_builder.dart';
 import '../../../models/bus.dart';
 import '../../../services/data_service.dart';
-import '../../../services/chilean_utils.dart';
 import '../../../main.dart';
 import '../../dialogs/bus_form/bus_form_dialog.dart';
 import '../../dialogs/historial_completo/historial_completo_dialog.dart';
@@ -306,241 +306,223 @@ class _BusesScreenState extends State<BusesScreen>
   void _actualizarRevisionTecnica(BuildContext context, Bus bus) {
     final TextEditingController fechaController = TextEditingController();
     DateTime? fechaSeleccionada = bus.fechaRevisionTecnica;
+    String? errorFecha;
 
+    // Prellenar con fecha existente en formato dd/mm/aa
     if (fechaSeleccionada != null) {
-      fechaController.text = ChileanUtils.formatDate(fechaSeleccionada);
+      final d = fechaSeleccionada.day.toString().padLeft(2, '0');
+      final m = fechaSeleccionada.month.toString().padLeft(2, '0');
+      final a = (fechaSeleccionada.year % 100).toString().padLeft(2, '0');
+      fechaController.text = '$d/$m/$a';
+    }
+
+    DateTime? parseFecha(String value) {
+      if (value.length != 8) return null;
+      try {
+        final parts = value.split('/');
+        if (parts.length != 3) return null;
+        final dia = int.parse(parts[0]);
+        final mes = int.parse(parts[1]);
+        int anio = int.parse(parts[2]);
+        anio = anio <= 50 ? 2000 + anio : 1900 + anio;
+        if (dia < 1 || dia > 31 || mes < 1 || mes > 12) return null;
+        final fecha = DateTime(anio, mes, dia);
+        if (fecha.day != dia || fecha.month != mes) return null;
+        return fecha;
+      } catch (e) {
+        return null;
+      }
     }
 
     showDialog(
       context: context,
       barrierColor: SurayColors.azulMarinoProfundo.withOpacity(0.5),
-      builder: (ctx) => TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.0, end: 1.0),
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        builder: (context, value, child) {
-          return Transform.scale(
-            scale: 0.8 + (0.2 * value),
-            child: Opacity(
-              opacity: value,
-              child: AlertDialog(
-                backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                title: Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF00897B), Color(0xFF4DB6AC)],
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          return TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return Transform.scale(
+                scale: 0.8 + (0.2 * value),
+                child: Opacity(
+                  opacity: value,
+                  child: AlertDialog(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.verified_user, color: Colors.white, size: 28),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    title: Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF00897B), Color(0xFF4DB6AC)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.verified_user, color: Colors.white, size: 28),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Revisión Técnica',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  bus.identificadorDisplay,
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Actualizar fecha de revisión técnica',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: SurayColors.grisAntracita,
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        TextField(
+                          controller: fechaController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            _DateInputFormatter(),
+                          ],
+                          decoration: InputDecoration(
+                            labelText: 'Fecha de vencimiento',
+                            hintText: 'dd/mm/aa',
+                            helperText: 'Formato: dd/mm/aa (ej: 15/06/27)',
+                            errorText: errorFecha,
+                            prefixIcon: Icon(Icons.calendar_today,
+                                color: Color(0xFF00897B)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                  color: Color(0xFF00897B), width: 1.5),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                  color: Color(0xFF00897B).withOpacity(0.3),
+                                  width: 1.5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  BorderSide(color: Color(0xFF00897B), width: 2),
+                            ),
+                          ),
+                          onChanged: (value) {
+                            final fecha = parseFecha(value);
+                            setDialogState(() {
+                              fechaSeleccionada = fecha;
+                              if (value.length == 8 && fecha == null) {
+                                errorFecha = 'Fecha inválida';
+                              } else {
+                                errorFecha = null;
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(
+                          'Cancelar',
+                          style: TextStyle(color: SurayColors.grisAntracita),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (fechaSeleccionada == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Por favor seleccione una fecha'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          try {
+                            final busActualizado = bus.copyWith(
+                              fechaRevisionTecnica: fechaSeleccionada,
+                            );
+                            await DataService.updateBus(busActualizado);
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    Icon(Icons.check_circle, color: Colors.white),
+                                    SizedBox(width: 8),
+                                    Text(
+                                        'Revisión técnica actualizada correctamente'),
+                                  ],
+                                ),
+                                backgroundColor: Color(0xFF00897B),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error al actualizar: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF00897B),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              'Revisión Técnica',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              bus.patente,
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
-                                fontSize: 14,
-                              ),
-                            ),
+                            Icon(Icons.save, size: 18),
+                            SizedBox(width: 8),
+                            Text('Guardar'),
                           ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                content: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Actualizar fecha de revisión técnica',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: SurayColors.grisAntracita,
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      TextField(
-                        controller: fechaController,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          labelText: 'Fecha de Revisión Técnica',
-                          hintText: 'Seleccione una fecha',
-                          prefixIcon: Icon(Icons.calendar_today,
-                              color: Color(0xFF00897B)),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                                color: Color(0xFF00897B), width: 1.5),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                                color: Color(0xFF00897B).withOpacity(0.3),
-                                width: 1.5),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                BorderSide(color: Color(0xFF00897B), width: 2),
-                          ),
-                        ),
-                        onTap: () async {
-                          final picked = await showDatePicker(
-                            context: ctx,
-                            initialDate: fechaSeleccionada ??
-                                DateTime.now().add(Duration(days: 365)),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(Duration(days: 730)),
-                            locale: Locale('es', 'CL'),
-                            builder: (context, child) {
-                              return Theme(
-                                data: ThemeData.light().copyWith(
-                                  colorScheme: ColorScheme.light(
-                                    primary: Color(0xFF00897B),
-                                    onPrimary: Colors.white,
-                                    surface: Colors.white,
-                                    onSurface: SurayColors.grisAntracita,
-                                  ),
-                                  dialogBackgroundColor: Colors.white,
-                                ),
-                                child: child!,
-                              );
-                            },
-                          );
-                          if (picked != null) {
-                            fechaSeleccionada = picked;
-                            fechaController.text =
-                                ChileanUtils.formatDate(picked);
-                          }
-                        },
-                      ),
-                      SizedBox(height: 16),
-                      if (fechaSeleccionada != null) ...[
-                        Container(
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Color(0xFF00897B).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: Color(0xFF00897B).withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.info_outline,
-                                  color: Color(0xFF00897B), size: 20),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Vigencia hasta: ${ChileanUtils.formatDate(fechaSeleccionada!)}',
-                                  style: TextStyle(
-                                    color: Color(0xFF00897B),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(
-                      'Cancelar',
-                      style: TextStyle(color: SurayColors.grisAntracita),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (fechaSeleccionada == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Por favor seleccione una fecha'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      try {
-                        final busActualizado = bus.copyWith(
-                          fechaRevisionTecnica: fechaSeleccionada,
-                        );
-                        await DataService.updateBus(busActualizado);
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                Icon(Icons.check_circle, color: Colors.white),
-                                SizedBox(width: 8),
-                                Text(
-                                    'Revisión técnica actualizada correctamente'),
-                              ],
-                            ),
-                            backgroundColor: Color(0xFF00897B),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        );
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Error al actualizar: $e'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF00897B),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.save, size: 18),
-                        SizedBox(width: 8),
-                        Text('Guardar'),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+              );
+            },
           );
         },
       ),
@@ -882,6 +864,36 @@ class _MaintenanceConfigDialogState extends State<MaintenanceConfigDialog> {
           borderRadius: BorderRadius.circular(10),
         ),
       ),
+    );
+  }
+}
+
+/// Formateador de entrada para fechas en formato dd/mm/aa
+class _DateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+
+    // Solo permitir hasta 6 dígitos (ddmmaa)
+    if (text.length > 6) {
+      return oldValue;
+    }
+
+    // Formatear con slashes
+    String formatted = '';
+    for (int i = 0; i < text.length; i++) {
+      if (i == 2 || i == 4) {
+        formatted += '/';
+      }
+      formatted += text[i];
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

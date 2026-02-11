@@ -45,9 +45,9 @@ class DashboardMobileLayout extends StatelessWidget {
               ),
               SizedBox(height: 16),
 
-              // Estado de la flota (cards compactas en columna)
-              _buildEstadoBusesCompacto(),
-              SizedBox(height: 16),
+              // Estado de la flota (cards compactas en columna) - OCULTO
+              // _buildEstadoBusesCompacto(),
+              // SizedBox(height: 16),
 
               // Alerta ROJA para buses VENCIDOS
               _buildAlertasKilometrajeVencido(),

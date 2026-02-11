@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../../../../models/bus.dart';
 import '../../../../models/mantenimiento_preventivo.dart';
 import '../../../../models/tipo_mantenimiento_personalizado.dart';
 import '../../../../services/data_service.dart';
-import '../../../../services/chilean_utils.dart';
-import '../../../../widgets/tipo_mantenimiento_selector.dart';
+import '../../../../main.dart';
 
 class MantenimientoPreventivoDesktopLayout extends StatefulWidget {
   final Bus bus;
@@ -27,17 +27,28 @@ class _MantenimientoPreventivoDesktopLayoutState
   late TextEditingController _tecnicoController;
   late TextEditingController _observacionesController;
   late TextEditingController _marcaRepuestoController;
+  late TextEditingController _alarmaKmController;
+  late TextEditingController _tituloPersonalizadoController;
+  late TextEditingController _fechaController;
 
-  // Campos para tipos personalizados
   TipoMantenimiento _tipoMantenimiento = TipoMantenimiento.preventivo;
   String _tituloMantenimiento = '';
-  String? _descripcionMantenimiento;
 
   TipoMotor _tipoMotor = TipoMotor.diesel;
   bool _isLoading = false;
-
-  // Fecha del mantenimiento seleccionable
+  bool _configurarAlarma = false;
   DateTime _fechaMantenimiento = DateTime.now();
+
+  final List<Map<String, dynamic>> _tiposMantenimiento = [
+    {'titulo': 'Filtro de Aceite', 'icon': Icons.opacity, 'color': Color(0xFFFF9800), 'tipo': TipoMantenimiento.preventivo},
+    {'titulo': 'Filtro de Aire', 'icon': Icons.air, 'color': Color(0xFF2196F3), 'tipo': TipoMantenimiento.preventivo},
+    {'titulo': 'Filtro de Combustible', 'icon': Icons.local_gas_station, 'color': Color(0xFF4CAF50), 'tipo': TipoMantenimiento.preventivo},
+    {'titulo': 'Cambio de Aceite', 'icon': Icons.water_drop, 'color': Color(0xFF795548), 'tipo': TipoMantenimiento.preventivo},
+    {'titulo': 'Frenos', 'icon': Icons.pan_tool, 'color': Color(0xFFE53935), 'tipo': TipoMantenimiento.correctivo},
+    {'titulo': 'Neumáticos', 'icon': Icons.tire_repair, 'color': Color(0xFF424242), 'tipo': TipoMantenimiento.rutinario},
+    {'titulo': 'Batería', 'icon': Icons.battery_charging_full, 'color': Color(0xFF9C27B0), 'tipo': TipoMantenimiento.correctivo},
+    {'titulo': 'Otro', 'icon': Icons.more_horiz, 'color': Color(0xFF607D8B), 'tipo': TipoMantenimiento.preventivo},
+  ];
 
   @override
   void initState() {
@@ -45,8 +56,17 @@ class _MantenimientoPreventivoDesktopLayoutState
     _tecnicoController = TextEditingController();
     _observacionesController = TextEditingController();
     _marcaRepuestoController = TextEditingController();
+    _alarmaKmController = TextEditingController(text: '5000');
+    _tituloPersonalizadoController = TextEditingController();
+    _fechaController = TextEditingController();
 
-    // Cargar configuración actual del bus
+    // Prellenar con fecha actual en formato dd/mm/aa
+    final now = DateTime.now();
+    final d = now.day.toString().padLeft(2, '0');
+    final m = now.month.toString().padLeft(2, '0');
+    final a = (now.year % 100).toString().padLeft(2, '0');
+    _fechaController.text = '$d/$m/$a';
+
     if (widget.bus.mantenimientoPreventivo != null) {
       _tipoMotor = widget.bus.mantenimientoPreventivo!.tipoMotor;
     }
@@ -57,240 +77,381 @@ class _MantenimientoPreventivoDesktopLayoutState
     _tecnicoController.dispose();
     _observacionesController.dispose();
     _marcaRepuestoController.dispose();
+    _alarmaKmController.dispose();
+    _tituloPersonalizadoController.dispose();
+    _fechaController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Row(
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: 520,
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 20,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildHeader(),
+            Flexible(
+              child: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTipoMantenimientoGrid(),
+                      SizedBox(height: 20),
+                      if (_tituloMantenimiento == 'Otro') ...[
+                        _buildCampoPersonalizado(),
+                        SizedBox(height: 20),
+                      ],
+                      _buildFormularioCompacto(),
+                      SizedBox(height: 20),
+                      _buildAlarmaSection(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            _buildFooter(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    final formatador = NumberFormat("#,##0", "es_CL");
+    
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [SurayColors.azulMarinoProfundo, SurayColors.azulMarinoClaro],
+        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Row(
         children: [
-          Icon(Icons.build_circle, color: Color(0xFF1565C0)),
-          SizedBox(width: 8),
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.build_circle, color: Colors.white, size: 28),
+          ),
+          SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Registrar Mantenimiento'),
                 Text(
-                  '${widget.bus.identificadorDisplay}',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  'Registrar Mantenimiento',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      widget.bus.identificadorDisplay,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (widget.bus.kilometraje != null) ...[
+                      Text(' • ', style: TextStyle(color: Colors.white.withOpacity(0.6))),
+                      Icon(Icons.speed, size: 14, color: Colors.white.withOpacity(0.8)),
+                      SizedBox(width: 4),
+                      Text(
+                        '${formatador.format(widget.bus.kilometraje!)} km',
+                        style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
+          ),
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: Icon(Icons.close, color: Colors.white),
+            style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.1)),
           ),
         ],
       ),
-      content: Container(
-        width: 700,
-        constraints: BoxConstraints(maxHeight: 800),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Estado actual del bus
-                _buildEstadoActualWidget(),
-                SizedBox(height: 20),
+    );
+  }
 
-                // Selector de tipo de mantenimiento personalizado
-                Text(
-                  'Tipo de Mantenimiento',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1565C0)),
-                ),
-                SizedBox(height: 12),
-
-                TipoMantenimientoSelector(
-                  tipoMantenimientoInicial: _tipoMantenimiento,
-                  tituloInicial: _tituloMantenimiento,
-                  descripcionInicial: _descripcionMantenimiento,
-                  onChanged: (tipoBase, titulo, descripcion) {
-                    setState(() {
-                      _tipoMantenimiento = tipoBase;
-                      _tituloMantenimiento = titulo;
-                      _descripcionMantenimiento = descripcion;
-                    });
-                  },
-                ),
-
-                SizedBox(height: 20),
-
-                // Información del mantenimiento anterior personalizado
-                _buildUltimoMantenimientoPersonalizadoWidget(),
-
-                SizedBox(height: 20),
-
-                // Fecha del mantenimiento
-                Text(
-                  'Fecha del Mantenimiento',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1565C0)),
-                ),
-                SizedBox(height: 12),
-
-                InkWell(
-                  onTap: _seleccionarFechaMantenimiento,
-                  child: InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Fecha en que se realizó el mantenimiento',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.calendar_today),
-                      suffixIcon: Icon(Icons.edit),
-                      helperText: 'Toca para cambiar la fecha',
-                    ),
-                    child: Text(
-                      ChileanUtils.formatDate(_fechaMantenimiento),
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-
-                SizedBox(height: 16),
-
-                // Técnico responsable
-                TextFormField(
-                  controller: _tecnicoController,
-                  decoration: InputDecoration(
-                    labelText: 'Técnico Responsable',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  textCapitalization: TextCapitalization.words,
-                ),
-
-                SizedBox(height: 16),
-
-                // Marca del repuesto
-                TextFormField(
-                  controller: _marcaRepuestoController,
-                  decoration: InputDecoration(
-                    labelText: 'Marca del Repuesto/Material (opcional)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.branding_watermark),
-                    hintText: 'Ej: Mann Filter, Bosch, etc.',
-                  ),
-                  textCapitalization: TextCapitalization.words,
-                ),
-
-                SizedBox(height: 16),
-
-                // Observaciones
-                TextFormField(
-                  controller: _observacionesController,
-                  decoration: InputDecoration(
-                    labelText: 'Observaciones',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.note),
-                    hintText: 'Detalles del mantenimiento realizado...',
-                  ),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
+  Widget _buildTipoMantenimientoGrid() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Tipo de Mantenimiento',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: SurayColors.grisAntracita),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _isLoading ? null : () => Navigator.pop(context),
-          child: Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: _isLoading ? null : _registrarMantenimiento,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF1565C0),
-            foregroundColor: Colors.white,
+        SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 1.1,
           ),
-          child: _isLoading
-              ? SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
-                )
-              : Text('Registrar Mantenimiento'),
+          itemCount: _tiposMantenimiento.length,
+          itemBuilder: (context, index) {
+            final tipo = _tiposMantenimiento[index];
+            final isSelected = _tituloMantenimiento == tipo['titulo'];
+            
+            return InkWell(
+              onTap: () {
+                setState(() {
+                  _tituloMantenimiento = tipo['titulo'];
+                  _tipoMantenimiento = tipo['tipo'];
+                });
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: AnimatedContainer(
+                duration: Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  color: isSelected ? (tipo['color'] as Color).withOpacity(0.15) : Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? tipo['color'] : Colors.grey[200]!,
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(tipo['icon'], color: isSelected ? tipo['color'] : Colors.grey[500], size: 28),
+                    SizedBox(height: 6),
+                    Text(
+                      tipo['titulo'],
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        color: isSelected ? tipo['color'] : Colors.grey[600],
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ],
     );
   }
 
-  Widget _buildEstadoActualWidget() {
+  Widget _buildCampoPersonalizado() {
+    return TextFormField(
+      controller: _tituloPersonalizadoController,
+      decoration: InputDecoration(
+        labelText: 'Nombre del mantenimiento',
+        hintText: 'Ej: Revisión de suspensión',
+        prefixIcon: Icon(Icons.edit, color: SurayColors.azulMarinoProfundo),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey[50],
+      ),
+    );
+  }
+
+  Widget _buildFormularioCompacto() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _fechaController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  _DateInputFormatter(),
+                ],
+                decoration: InputDecoration(
+                  labelText: 'Fecha',
+                  hintText: 'dd/mm/aa',
+                  helperText: 'ej: 15/06/26',
+                  prefixIcon: Icon(Icons.calendar_today, size: 20, color: SurayColors.azulMarinoProfundo),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                ),
+                onChanged: (value) {
+                  final fecha = _parseFechaFromString(value);
+                  if (fecha != null) {
+                    setState(() => _fechaMantenimiento = fecha);
+                  }
+                },
+                validator: (value) {
+                  if (value != null && value.isNotEmpty && value.length == 8) {
+                    final fecha = _parseFechaFromString(value);
+                    if (fecha == null) return 'Fecha inválida';
+                  }
+                  return null;
+                },
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _tecnicoController,
+                decoration: InputDecoration(
+                  labelText: 'Técnico',
+                  hintText: 'Responsable',
+                  prefixIcon: Icon(Icons.person, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                ),
+                textCapitalization: TextCapitalization.words,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        TextFormField(
+          controller: _marcaRepuestoController,
+          decoration: InputDecoration(
+            labelText: 'Marca/Material (opcional)',
+            hintText: 'Ej: Mann Filter, Bosch',
+            prefixIcon: Icon(Icons.inventory_2, size: 20),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: Colors.grey[50],
+          ),
+          textCapitalization: TextCapitalization.words,
+        ),
+        SizedBox(height: 12),
+        TextFormField(
+          controller: _observacionesController,
+          decoration: InputDecoration(
+            labelText: 'Observaciones (opcional)',
+            hintText: 'Notas adicionales...',
+            prefixIcon: Padding(
+              padding: EdgeInsets.only(bottom: 40),
+              child: Icon(Icons.notes, size: 20),
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: Colors.grey[50],
+            alignLabelWithHint: true,
+          ),
+          maxLines: 2,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAlarmaSection() {
+    final kmActual = widget.bus.kilometraje ?? 0.0;
+    final kmAlarmaExtra = double.tryParse(_alarmaKmController.text) ?? 0.0;
+    final kmAlarmaTotal = kmActual + kmAlarmaExtra;
+    final formatador = NumberFormat("#,##0", "es_CL");
+
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue[200]!),
+        color: _configurarAlarma ? Colors.amber[50] : Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _configurarAlarma ? Colors.amber[300]! : Colors.grey[200]!),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.directions_bus, color: Colors.blue[700]),
-              SizedBox(width: 8),
+              Icon(
+                Icons.notifications_active,
+                color: _configurarAlarma ? Colors.amber[700] : Colors.grey[500],
+                size: 22,
+              ),
+              SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${widget.bus.identificadorDisplay} - ${widget.bus.marca} ${widget.bus.modelo}',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.blue[700]),
-                    ),
-                    if (widget.bus.ubicacionActual != null)
-                      Text('Ubicación: ${widget.bus.ubicacionActual}',
-                          style: TextStyle(fontSize: 12)),
-                    if (widget.bus.kilometraje != null)
-                      Text(
-                          'Kilometraje actual: ${widget.bus.kilometraje!.round()} km',
-                          style: TextStyle(fontSize: 12)),
-                  ],
+                child: Text(
+                  'Programar recordatorio',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: _configurarAlarma ? Colors.amber[800] : Colors.grey[700],
+                  ),
                 ),
               ),
-              _buildEstadoChip(),
+              Switch(
+                value: _configurarAlarma,
+                onChanged: (v) => setState(() => _configurarAlarma = v),
+                activeColor: Colors.amber[700],
+              ),
             ],
           ),
-
-          SizedBox(height: 12),
-
-          // Estadísticas de mantenimientos
-          if (widget.bus.totalMantenimientosRealizados > 0) ...[
-            Text(
-              'Historial de Mantenimientos:',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: Colors.blue[700]),
-            ),
-            SizedBox(height: 4),
-            Wrap(
-              spacing: 8,
-              children: widget.bus.estadisticasMantenimientosPorTipo.entries
-                  .map((entry) {
-                if (entry.value == 0) return SizedBox.shrink();
-                return Chip(
-                  avatar: Icon(_getIconoTipo(entry.key),
-                      size: 14, color: Colors.white),
-                  label: Text(
-                    '${_getLabelTipo(entry.key)}: ${entry.value}',
-                    style: TextStyle(color: Colors.white, fontSize: 11),
+          if (_configurarAlarma) ...[
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _alarmaKmController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: 'En cuántos km',
+                      suffixText: 'km',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    onChanged: (_) => setState(() {}),
                   ),
-                  backgroundColor: _getColorTipo(entry.key),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                );
-              }).toList(),
-            ),
-          ] else ...[
-            Text(
-              'Sin mantenimientos registrados',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                SizedBox(width: 12),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[700],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      Text('Alarma en', style: TextStyle(fontSize: 10, color: Colors.white70)),
+                      Text(
+                        '${formatador.format(kmAlarmaTotal)}',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      Text('km', style: TextStyle(fontSize: 10, color: Colors.white70)),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ],
@@ -298,251 +459,169 @@ class _MantenimientoPreventivoDesktopLayoutState
     );
   }
 
-  Widget _buildEstadoChip() {
-    Color color;
-    String label;
-    IconData icon;
-
-    switch (widget.bus.estado) {
-      case EstadoBus.disponible:
-        color = Colors.green;
-        label = 'Disponible';
-        icon = Icons.check_circle;
-        break;
-      case EstadoBus.enReparacion:
-        color = Colors.orange;
-        label = 'En Reparación';
-        icon = Icons.build;
-        break;
-      case EstadoBus.fueraDeServicio:
-        color = Colors.red;
-        label = 'Fuera de Servicio';
-        icon = Icons.cancel;
-        break;
-    }
-
-    return Chip(
-      avatar: Icon(icon, size: 16, color: Colors.white),
-      label: Text(label, style: TextStyle(color: Colors.white, fontSize: 12)),
-      backgroundColor: color,
-    );
-  }
-
-  Widget _buildUltimoMantenimientoPersonalizadoWidget() {
-    final ultimoMantenimiento = widget.bus.ultimoMantenimiento;
-
-    if (ultimoMantenimiento == null) {
-      return Container(
-        padding: EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          'Este bus no tiene historial de mantenimientos registrados',
-          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-        ),
-      );
-    }
-
+  Widget _buildFooter() {
     return Container(
-      padding: EdgeInsets.all(12),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.green[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.green[200]!),
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+        border: Border(top: BorderSide(color: Colors.grey[200]!)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(_getIconoTipo(ultimoMantenimiento.tipoMantenimientoEfectivo),
-                  color: _getColorTipo(
-                      ultimoMantenimiento.tipoMantenimientoEfectivo)),
-              SizedBox(width: 8),
-              Text(
-                'Último Mantenimiento Realizado',
-                style: TextStyle(fontWeight: FontWeight.bold),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _isLoading ? null : () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                side: BorderSide(color: Colors.grey[400]!),
               ),
-            ],
+              child: Text('Cancelar', style: TextStyle(color: Colors.grey[700])),
+            ),
           ),
-          SizedBox(height: 8),
-          Text('Tipo: ${ultimoMantenimiento.descripcionTipo}'),
-          Text(
-              'Fecha: ${ChileanUtils.formatDate(ultimoMantenimiento.fechaUltimoCambio)}'),
-          Text(
-              'Kilometraje: ${ultimoMantenimiento.kilometrajeUltimoCambio.round()} km'),
-          if (ultimoMantenimiento.tecnicoResponsable != null)
-            Text('Técnico: ${ultimoMantenimiento.tecnicoResponsable}'),
-          if (ultimoMantenimiento.marcaRepuesto != null)
-            Text('Marca: ${ultimoMantenimiento.marcaRepuesto}'),
+          SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _registrarMantenimiento,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: SurayColors.azulMarinoProfundo,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: _isLoading
+                  ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check, size: 20),
+                        SizedBox(width: 8),
+                        Text('Registrar', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  void _seleccionarFechaMantenimiento() async {
-    final fecha = await showDatePicker(
-      context: context,
-      initialDate: _fechaMantenimiento,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      helpText: 'Fecha del mantenimiento',
-      cancelText: 'Cancelar',
-      confirmText: 'Seleccionar',
-    );
-
-    if (fecha != null) {
-      setState(() {
-        _fechaMantenimiento = fecha;
-      });
+  DateTime? _parseFechaFromString(String value) {
+    if (value.length != 8) return null;
+    try {
+      final parts = value.split('/');
+      if (parts.length != 3) return null;
+      final dia = int.parse(parts[0]);
+      final mes = int.parse(parts[1]);
+      int anio = int.parse(parts[2]);
+      anio = anio <= 50 ? 2000 + anio : 1900 + anio;
+      if (dia < 1 || dia > 31 || mes < 1 || mes > 12) return null;
+      final fecha = DateTime(anio, mes, dia);
+      if (fecha.day != dia || fecha.month != mes) return null;
+      return fecha;
+    } catch (e) {
+      return null;
     }
   }
 
   void _registrarMantenimiento() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    // Validar que se haya seleccionado un título
-    if (_tituloMantenimiento.trim().isEmpty) {
+    if (_tituloMantenimiento.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Debe especificar el título del mantenimiento'),
-          backgroundColor: Colors.orange,
-        ),
+        SnackBar(content: Text('Selecciona el tipo de mantenimiento'), backgroundColor: Colors.orange),
       );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      // Usar el kilometraje actual del bus
       final kilometrajeReferencia = widget.bus.kilometraje ?? 0.0;
 
-      // Configurar mantenimiento preventivo básico si es necesario
       if (widget.bus.mantenimientoPreventivo == null) {
-        await DataService.configurarMantenimientoPreventivo(
-          busId: widget.bus.id,
-          tipoMotor: _tipoMotor,
-        );
+        await DataService.configurarMantenimientoPreventivo(busId: widget.bus.id, tipoMotor: _tipoMotor);
       }
 
-      // ✅ NUEVO: Verificar si es un filtro crítico y usar método especializado
-      final filtrosCriticos = [
-        'Filtro de Aceite',
-        'Filtro de Aire',
-        'Filtro de Combustible'
-      ];
+      final filtrosCriticos = ['Filtro de Aceite', 'Filtro de Aire', 'Filtro de Combustible'];
+      final titulo = _tituloMantenimiento == 'Otro' 
+          ? _tituloPersonalizadoController.text.trim() 
+          : _tituloMantenimiento;
 
-      if (filtrosCriticos.contains(_tituloMantenimiento.trim())) {
-        // Usar método especializado para filtros críticos
+      if (titulo.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ingresa el nombre del mantenimiento'), backgroundColor: Colors.orange),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      if (filtrosCriticos.contains(titulo)) {
         await DataService.registrarMantenimientoFiltroCritico(
           busId: widget.bus.id,
-          tituloFiltro: _tituloMantenimiento.trim(),
+          tituloFiltro: titulo,
           kilometrajeActual: kilometrajeReferencia,
           fechaMantenimiento: _fechaMantenimiento,
-          tecnicoResponsable: _tecnicoController.text.trim().isEmpty
-              ? null
-              : _tecnicoController.text.trim(),
-          observaciones: _observacionesController.text.trim().isEmpty
-              ? null
-              : _observacionesController.text.trim(),
-          marcaRepuesto: _marcaRepuestoController.text.trim().isEmpty
-              ? null
-              : _marcaRepuestoController.text.trim(),
+          tecnicoResponsable: _tecnicoController.text.trim().isEmpty ? null : _tecnicoController.text.trim(),
+          observaciones: _observacionesController.text.trim().isEmpty ? null : _observacionesController.text.trim(),
+          marcaRepuesto: _marcaRepuestoController.text.trim().isEmpty ? null : _marcaRepuestoController.text.trim(),
         );
-
-        print('✅ Filtro crítico registrado con seguimiento de kilometraje');
       } else {
-        // Usar método estándar para otros tipos de mantenimiento
         await DataService.registrarMantenimientoPersonalizado(
           busId: widget.bus.id,
-          tituloMantenimiento: _tituloMantenimiento.trim(),
-          descripcionMantenimiento: _descripcionMantenimiento,
+          tituloMantenimiento: titulo,
+          descripcionMantenimiento: null,
           tipoMantenimiento: _tipoMantenimiento,
           kilometrajeActual: kilometrajeReferencia,
           fechaMantenimiento: _fechaMantenimiento,
-          tecnicoResponsable: _tecnicoController.text.trim().isEmpty
-              ? null
-              : _tecnicoController.text.trim(),
-          observaciones: _observacionesController.text.trim().isEmpty
-              ? null
-              : _observacionesController.text.trim(),
-          marcaRepuesto: _marcaRepuestoController.text.trim().isEmpty
-              ? null
-              : _marcaRepuestoController.text.trim(),
+          tecnicoResponsable: _tecnicoController.text.trim().isEmpty ? null : _tecnicoController.text.trim(),
+          observaciones: _observacionesController.text.trim().isEmpty ? null : _observacionesController.text.trim(),
+          marcaRepuesto: _marcaRepuestoController.text.trim().isEmpty ? null : _marcaRepuestoController.text.trim(),
         );
       }
 
       Navigator.pop(context, true);
-
-      // ✅ MENSAJE DIFERENCIADO para filtros críticos
-      final mensaje = filtrosCriticos.contains(_tituloMantenimiento.trim())
-          ? 'Filtro crítico "${_tituloMantenimiento}" registrado para ${widget.bus.identificadorDisplay}. Ahora se monitoreará automáticamente.'
-          : 'Mantenimiento "${_tituloMantenimiento}" registrado para ${widget.bus.identificadorDisplay}';
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(mensaje),
-          backgroundColor: filtrosCriticos.contains(_tituloMantenimiento.trim())
-              ? Colors.orange
-              : Colors.green,
-          duration: Duration(seconds: 4),
-        ),
+        SnackBar(content: Text('Mantenimiento "$titulo" registrado'), backgroundColor: Colors.green),
       );
-
-      // Llamar al callback para refrescar el estado
       widget.onMantenimientoRegistrado?.call();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al registrar mantenimiento: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+}
+
+/// Formateador de entrada para fechas en formato dd/mm/aa
+class _DateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+
+    // Solo permitir hasta 6 dígitos (ddmmaa)
+    if (text.length > 6) {
+      return oldValue;
+    }
+
+    // Formatear con slashes
+    String formatted = '';
+    for (int i = 0; i < text.length; i++) {
+      if (i == 2 || i == 4) {
+        formatted += '/';
       }
+      formatted += text[i];
     }
-  }
 
-  // Métodos de utilidad
-  IconData _getIconoTipo(TipoMantenimiento tipo) {
-    switch (tipo) {
-      case TipoMantenimiento.correctivo:
-        return Icons.handyman;
-      case TipoMantenimiento.rutinario:
-        return Icons.schedule;
-      case TipoMantenimiento.preventivo:
-        return Icons.build_circle;
-    }
-  }
-
-  Color _getColorTipo(TipoMantenimiento tipo) {
-    switch (tipo) {
-      case TipoMantenimiento.correctivo:
-        return Color(0xFFE53E3E);
-      case TipoMantenimiento.rutinario:
-        return Color(0xFF3182CE);
-      case TipoMantenimiento.preventivo:
-        return Color(0xFF38A169);
-    }
-  }
-
-  String _getLabelTipo(TipoMantenimiento tipo) {
-    switch (tipo) {
-      case TipoMantenimiento.correctivo:
-        return 'Correctivo';
-      case TipoMantenimiento.rutinario:
-        return 'Rutinario';
-      case TipoMantenimiento.preventivo:
-        return 'Preventivo';
-    }
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
   }
 }
